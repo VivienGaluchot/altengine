@@ -1,6 +1,7 @@
 "use strict"
 
 import * as Svg from './svg.mjs';
+import * as Engine from './engine.mjs';
 
 
 // Private
@@ -100,5 +101,18 @@ class SvgFrame {
     }
 }
 
+class Circle extends Engine.MovingObject {
+    constructor(loop, parent, radius, style) {
+        super(loop);
+        this.el = new Svg.Circle(0, 0, radius, style);
+        parent.appendChild(this.el);
+    }
 
-export { SvgFrame }
+    redraw() {
+        this.el.x = this.pos.x;
+        this.el.y = this.pos.y;
+    }
+}
+
+
+export { SvgFrame, Circle }

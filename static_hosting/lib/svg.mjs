@@ -138,11 +138,34 @@ class Rect extends SvgTag {
     }
 }
 
+class Circle extends SvgTag {
+    constructor(x, y, r, style) {
+        super("circle");
+        this.x = x;
+        this.x = y;
+        this.r = r;
+        this.style = style;
+    }
+
+    set x(value) {
+        this.setAttribute("cx", value);
+    }
+
+    set y(value) {
+        this.setAttribute("cy", value);
+    }
+
+    set r(value) {
+        this.setAttribute("r", value);
+    }
+}
+
 
 export {
     SvgNode,
     SvgTag,
     Group,
     Line,
-    Rect
+    Rect,
+    Circle
 }
