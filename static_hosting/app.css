@@ -1,0 +1,18 @@
+/* layout */
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    background-color: black;
+}
+
+body {
+    display: flex;
+}
+
+.altng-frame {
+    width: 100%;
+    height: 100%;
+}
