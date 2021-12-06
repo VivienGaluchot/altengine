@@ -16,3 +16,11 @@ body {
     width: 100%;
     height: 100%;
 }
+
+.fps-ctr {
+    position: absolute;
+    bottom: .5rem;
+    left: .5rem;
+    color: rgba(255, 255, 255, 0.247);
+    font-family: 'Courier New', Courier, monospace;
+}

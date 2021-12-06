@@ -47,10 +47,6 @@ class LoopObject {
         // not implemented, to override
     }
 
-    postUpdate(ctx) {
-        // not implemented, to override
-    }
-
     redraw(ctx) {
         // not implemented, to override
     }
@@ -81,8 +77,10 @@ class FreqObserver extends LoopObject {
         this.noLogInMs += ctx.dtInMs;
         this.ctr += 1;
         if (this.noLogInMs > 1000) {
-            console.log("fps ", this.ctr);
             this.noLogInMs -= 1000;
+            for (let el of document.querySelectorAll(".altgn-fps-ctr")) {
+                el.innerText = this.ctr;
+            }
             this.ctr = 0;
         }
     }
@@ -92,6 +90,7 @@ class RenderLoop {
     constructor() {
         this.objects = new Set();
         this.lastLoopTime = null;
+        this.reqFrame = null;
         new FreqObserver(this);
     }
 
@@ -104,11 +103,15 @@ class RenderLoop {
 
     start() {
         this.lastLoopTime = null;
-        this.execLoop();
+        let loop = () => {
+            this.execLoop();
+            this.reqFrame = window.requestAnimationFrame(loop);
+        };
+        loop();
     }
 
     stop() {
-        clearTimeout(this.timeout);
+        window.cancelAnimationFrame(this.reqFrame);
     }
 
     execLoop() {
@@ -117,19 +120,21 @@ class RenderLoop {
         if (this.lastLoopTime) {
             dtInMs = loopTime - this.lastLoopTime;
         }
+        if (dtInMs > 100) {
+            console.warn(`render too slow, cap render period from ${dtInMs}ms to 100ms`);
+            dtInMs = 100;
+        }
         const ctx = {
             dt: dtInMs / 1000,
             dtInMs: dtInMs
         };
         for (let o of this.objects) {
             o.update(ctx);
-            o.postUpdate(ctx);
         }
         for (let o of this.objects) {
             o.redraw(ctx);
         }
         this.lastLoopTime = loopTime;
-        this.timeout = setTimeout(() => { this.execLoop(); }, 1);
     }
 }
 

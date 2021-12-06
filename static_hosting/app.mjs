@@ -13,15 +13,17 @@ class Part extends Altgn.Circle {
     constructor(loop) {
         super(loop, frame.el, .2, { fill: "#8AF" });
         this.acc.y = -9;
-        this.postUpdate = () => {
-            if (this.pos.y < (-5 + .2)) {
-                this.pos.y = (-5 + .2);
-                if (this.speed.y < 0) {
-                    // TODO prevent energy gain on -1
-                    this.speed.y *= -.9;
-                }
+    }
+
+    update(ctx) {
+        super.update(ctx);
+        if (this.pos.y < (-5 + .2)) {
+            this.pos.y = (-5 + .2);
+            if (this.speed.y < 0) {
+                // TODO prevent energy gain on -1
+                this.speed.y *= -.9;
             }
-        };
+        }
     }
 }
 
