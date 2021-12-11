@@ -1,74 +1,65 @@
 "use strict"
 
 
-// Private
+// Public
 
-class Vector {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
+class Component {
+    constructor(obj) {
+        this.obj = obj;
     }
 
-    clone() {
-        return new Vector(this.x, this.y);
+    getComponent(cmpClass) {
+        return this.obj.getComponent(cmpClass);
     }
 
-    addInPlace(v) {
-        this.x += v.x;
-        this.y += v.y;
-        return this;
+    // ctx: { dt: Number,  dtInMs: Number }
+    update(ctx) {
+        // not implemented, to override
     }
 
-    add(v) {
-        return this.clone().addInPlace(v);
-    }
-
-    scaleInPlace(a) {
-        this.x *= a;
-        this.y *= a;
-        return this;
-    }
-
-    scale(a) {
-        return this.clone().scaleInPlace(a);
+    // ctx: { dt: Number,  dtInMs: Number }
+    draw(ctx) {
+        // not implemented, to override
     }
 }
 
-
-// Public
-
-class LoopObject {
+class Entity {
     constructor(loop) {
         loop.subscribe(this);
         this.loop = loop;
+        this.components = [];
+        this.componentsByClass = new Map();
+    }
+
+    registerComponent(cmpClass, args) {
+        let cmp = new cmpClass(this, args);
+        this.components.push(cmp);
+        if (this.componentsByClass.has(cmpClass)) {
+            throw new Error("component already registered for class", cmpClass);
+        }
+        this.componentsByClass.set(cmpClass, cmp);
+    }
+
+    getComponent(cmpClass) {
+        return this.componentsByClass.get(cmpClass);
     }
 
     update(ctx) {
-        // not implemented, to override
+        for (let cmp of this.components) {
+            cmp.update(ctx);
+        }
     }
 
-    redraw(ctx) {
-        // not implemented, to override
-    }
-}
-
-class MovingObject extends LoopObject {
-    constructor(loop) {
-        super(loop);
-        this.pos = new Vector(0, 0);
-        this.speed = new Vector(0, 0);
-        this.acc = new Vector(0, 0);
-    }
-
-    update(ctx) {
-        this.pos.addInPlace(this.speed.scale(ctx.dt));
-        this.speed.addInPlace(this.acc.scale(ctx.dt));
+    draw(ctx) {
+        for (let cmp of this.components) {
+            cmp.draw(ctx);
+        }
     }
 }
 
-class FreqObserver extends LoopObject {
-    constructor(loop) {
-        super(loop);
+class FreqObserverComponent extends Component {
+    constructor(obj) {
+        super(obj);
         this.noLogInMs = 0;
         this.ctr = 0;
     }
@@ -91,11 +82,11 @@ class RenderLoop {
         this.objects = new Set();
         this.lastLoopTime = null;
         this.reqFrame = null;
-        new FreqObserver(this);
+        new Entity(this).registerComponent(FreqObserverComponent);
     }
 
     subscribe(object) {
-        if (!object instanceof LoopObject) {
+        if (!object instanceof Entity) {
             throw new Error("invalid object");
         }
         this.objects.add(object);
@@ -132,10 +123,10 @@ class RenderLoop {
             o.update(ctx);
         }
         for (let o of this.objects) {
-            o.redraw(ctx);
+            o.draw(ctx);
         }
         this.lastLoopTime = loopTime;
     }
 }
 
-export { RenderLoop, LoopObject, MovingObject }
+export { RenderLoop, Entity, Component }

@@ -2,6 +2,7 @@
 
 import * as Svg from './svg.mjs';
 import * as Engine from './engine.mjs';
+import * as Physics from './physics.mjs';
 
 
 // Private
@@ -101,16 +102,28 @@ class SvgFrame {
     }
 }
 
-class Circle extends Engine.MovingObject {
-    constructor(loop, parent, radius, style) {
-        super(loop);
-        this.el = new Svg.Circle(0, 0, radius, style);
-        parent.appendChild(this.el);
+class SvgCircleComponent extends Engine.Component {
+    // args:
+    // {parent, radius, style}
+    constructor(obj, args) {
+        super(obj);
+        this.svgEl = new Svg.Circle(0, 0, args.radius, args.style);
+        args.parent.appendChild(this.svgEl);
     }
 
-    redraw() {
-        this.el.x = this.pos.x;
-        this.el.y = this.pos.y;
+    draw() {
+        let cmp = this.getComponent(Physics.MovingComponent);
+        this.svgEl.x = cmp.pos.x;
+        this.svgEl.y = cmp.pos.y;
+    }
+}
+
+class Circle extends Engine.Entity {
+    constructor(loop, parent, radius, style) {
+        super(loop);
+        this.registerComponent(Physics.MovingComponent);
+        let args = { parent: parent, radius: radius, style: style };
+        this.registerComponent(SvgCircleComponent, args);
     }
 }
 
