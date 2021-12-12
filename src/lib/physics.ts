@@ -25,4 +25,41 @@ class MovingComponent extends Engine.Component {
 }
 
 
-export { MovingComponent }
+interface Collision {
+    target: CollidingComponent;
+    // pos: Maths.Vector;
+    // normal: Maths.Vector;
+}
+
+class CollidingComponent extends Engine.Component {
+    collisions: Array<Collision>;
+    // bounding box relative to the object position
+    boundingBox: Maths.Rect;
+
+    mCmp: MovingComponent;
+
+    constructor(ent: Engine.Entity, boundingBox: Maths.Rect) {
+        super(ent);
+        this.collisions = [];
+        this.boundingBox = boundingBox;
+        this.mCmp = this.getComponent<MovingComponent>(MovingComponent);
+    }
+
+    isMaybeColliding(other: CollidingComponent) {
+        return this.boundingBox.translate(this.mCmp.pos).intersect(other.boundingBox.translate(other.mCmp.pos));
+    }
+
+    collide(ctx: Engine.FrameContext) {
+        // TODO compute collisions set
+        this.collisions = [];
+        let allColliders: Array<CollidingComponent> = [];
+        for (let other of allColliders) {
+            if (other != this && this.isMaybeColliding(other)) {
+                this.collisions.push({ target: other });
+            }
+        }
+    }
+}
+
+
+export { MovingComponent, CollidingComponent }

@@ -100,15 +100,12 @@ class SvgFrame {
 
         let viewSpanX = 0;
         let viewSpanY = 0;
-        if (elRatio < screenRatio) {
+        if (elRatio <= screenRatio) {
             viewSpanX = elSpanY * screenRatio;
             viewSpanY = elSpanY;
-        } else if (elRatio > screenRatio) {
-            viewSpanX = elSpanX;
-            viewSpanY = elSpanX / screenRatio;
         } else {
             viewSpanX = elSpanX;
-            viewSpanY = elSpanY;
+            viewSpanY = elSpanX / screenRatio;
         }
 
         this.fullView.pos.x = -1 * viewSpanX / 2;

@@ -21,7 +21,7 @@ class FallingBouncing extends Engine.Component {
         this.getComponent<Physics.MovingComponent>(Physics.MovingComponent).acc.y = -9.81;
     }
 
-    update(ctx: Engine.FrameContext) {
+    override update(ctx: Engine.FrameContext) {
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         if (cmp.pos.y < (-5 + .2)) {
             cmp.pos.y = (-5 + .2);

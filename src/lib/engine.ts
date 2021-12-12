@@ -5,21 +5,25 @@
 
 interface FrameContext {
     dt: number,
-    dtInMs: number
+    dtInMs: number,
 }
 
 class Component {
-    obj: Entity;
+    ent: Entity;
 
-    constructor(obj: Entity, args: any = null) {
-        this.obj = obj;
+    constructor(ent: Entity) {
+        this.ent = ent;
     }
 
     getComponent<Type extends Component>(cmpClass: typeof Component): Type {
-        return this.obj.getComponent(cmpClass);
+        return this.ent.getComponent(cmpClass);
     }
 
     update(ctx: FrameContext) {
+        // to implement
+    }
+
+    collide(ctx: FrameContext) {
         // to implement
     }
 
@@ -29,18 +33,25 @@ class Component {
 }
 
 class Entity {
-    parent: Entity | null;
+    loop: RenderLoop;
+    parentEnt: Entity | null;
     components: Array<Component>;
     componentsByClass: Map<Function, Component>;
     children: Set<Entity>;
 
-    constructor(parent: Entity | null) {
-        this.parent = parent;
+    constructor(parent: RenderLoop | Entity) {
+        if (parent instanceof Entity) {
+            this.loop = parent.loop;
+            this.parentEnt = parent;
+        } else {
+            this.loop = parent;
+            this.parentEnt = null;
+        }
         this.components = [];
         this.componentsByClass = new Map();
         this.children = new Set();
-        if (parent) {
-            parent.addChild(this);
+        if (this.parentEnt) {
+            this.parentEnt.addChild(this);
         }
     }
 
@@ -73,6 +84,15 @@ class Entity {
         }
         for (let ent of this.children) {
             ent.update(ctx);
+        }
+    }
+
+    collide(ctx: FrameContext) {
+        for (let cmp of this.components) {
+            cmp.collide(ctx);
+        }
+        for (let ent of this.children) {
+            ent.collide(ctx);
         }
     }
 
@@ -117,7 +137,7 @@ class RenderLoop {
     constructor() {
         this.lastLoopTime = null;
         this.reqFrame = null;
-        this.root = new Entity(null);
+        this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
     }
 
@@ -150,8 +170,28 @@ class RenderLoop {
             dt: dtInMs / 1000,
             dtInMs: dtInMs
         };
+
+        // TODO register the component at a specific render step
+        // enum RenderStep {
+        //     Move,
+        //     Collide,
+        //     Draw
+        // }
+        // use a single callback for every steps
+        // pass the step as arg
+
+        // 1. move
         this.root.update(ctx);
+
+        // 2. collide
+        // TODO compute an efficient colliding memory structure
+        // https://en.wikipedia.org/wiki/Quadtree
+        // and add it to the context
+        this.root.collide(ctx);
+
+        // 3. draw
         this.root.draw(ctx);
+
         this.lastLoopTime = loopTime;
     }
 }

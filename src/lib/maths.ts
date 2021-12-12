@@ -46,6 +46,10 @@ class Rect {
         this.size = size;
     }
 
+    clone() {
+        return new Rect(this.pos.clone(), this.size.clone());
+    }
+
     minX() {
         return this.pos.x;
     }
@@ -62,8 +66,23 @@ class Rect {
         return this.pos.y + this.size.y;
     }
 
+    translateInPlace(v: Vector) {
+        this.pos.addInPlace(v);
+        return this;
+    }
+
+    translate(v: Vector) {
+        return this.clone().translateInPlace(v);
+    }
+
     contains(p: Vector) {
         return p.x >= this.minX() && p.x <= this.maxX() && p.y >= this.minY() && p.y <= this.maxY();
+    }
+
+    intersect(r: Rect) {
+        let interX = this.minX() <= r.maxX() && this.maxX() >= r.minX();
+        let interY = this.minY() <= r.maxY() && this.maxY() >= r.minY();
+        return interX && interY;
     }
 }
 
