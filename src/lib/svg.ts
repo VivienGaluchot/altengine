@@ -3,7 +3,7 @@
 
 // Private
 
-function setStyle(el, style) {
+function setStyle(el: Element, style: SvgStyle) {
     if (style.className) {
         el.setAttribute("class", style.className);
     }
@@ -21,43 +21,33 @@ function setStyle(el, style) {
     }
 }
 
-function rect(x, y, w, h, style) {
-    let el = document.createElementNS(svgNS, "rect");
-    el.setAttribute("x", x);
-    el.setAttribute("y", y);
-    el.setAttribute("width", w);
-    el.setAttribute("height", h);
-    el.setAttribute("stroke-linejoin", "round");
-    setStyle(el, style);
-    return el;
-}
-
-function circle(x, y, r, style) {
-    let el = document.createElementNS(svgNS, "circle");
-    el.setAttribute("cx", x);
-    el.setAttribute("cy", y);
-    el.setAttribute("r", r);
-    setStyle(el, style);
-    return el;
-}
-
 
 // Public
 
+interface SvgStyle {
+    className?: string;
+    fill?: string;
+    stroke?: string;
+    strokeW?: string;
+    vectorEffect?: string;
+}
+
 class SvgNode {
-    constructor(el) {
+    domEl: Element;
+
+    constructor(el: Element) {
         this.domEl = el;
     }
 
-    set style(value) {
+    set style(value: SvgStyle) {
         setStyle(this.domEl, value);
     }
 
-    setAttribute(name, value) {
+    setAttribute(name: string, value: string) {
         this.domEl.setAttribute(name, value);
     }
 
-    appendChild(el) {
+    appendChild(el: SvgNode | Element) {
         if (el instanceof SvgNode) {
             this.domEl.appendChild(el.domEl);
         } else {
@@ -67,25 +57,25 @@ class SvgNode {
 }
 
 class SvgTag extends SvgNode {
-    constructor(tag) {
+    constructor(tag: string) {
         const svgNS = "http://www.w3.org/2000/svg";
         super(document.createElementNS(svgNS, tag));
     }
 }
 
 class Group extends SvgTag {
-    constructor(id) {
+    constructor(id: string) {
         super("g");
         this.id = id;
     }
 
-    set id(value) {
+    set id(value: string) {
         this.domEl.setAttribute("id", value);
     }
 }
 
 class Line extends SvgTag {
-    constructor(x1, y1, x2, y2, style) {
+    constructor(x1: number, y1: number, x2: number, y2: number, style: SvgStyle) {
         super("line");
         this.x1 = x1;
         this.y1 = y1;
@@ -94,25 +84,25 @@ class Line extends SvgTag {
         this.style = style;
     }
 
-    set x1(value) {
-        this.setAttribute("x1", value);
+    set x1(value: number) {
+        this.setAttribute("x1", value.toString());
     }
 
-    set y1(value) {
-        this.setAttribute("y1", value);
+    set y1(value: number) {
+        this.setAttribute("y1", value.toString());
     }
 
-    set x2(value) {
-        this.setAttribute("x2", value);
+    set x2(value: number) {
+        this.setAttribute("x2", value.toString());
     }
 
-    set y2(value) {
-        this.setAttribute("y2", value);
+    set y2(value: number) {
+        this.setAttribute("y2", value.toString());
     }
 }
 
 class Rect extends SvgTag {
-    constructor(x, y, w, h, style) {
+    constructor(x: number, y: number, w: number, h: number, style: SvgStyle) {
         super("rect");
         this.x = x;
         this.y = y;
@@ -121,25 +111,25 @@ class Rect extends SvgTag {
         this.style = style;
     }
 
-    set x(value) {
-        this.setAttribute("x", value);
+    set x(value: number) {
+        this.setAttribute("x", value.toString());
     }
 
-    set y(value) {
-        this.setAttribute("y", value);
+    set y(value: number) {
+        this.setAttribute("y", value.toString());
     }
 
-    set w(value) {
-        this.setAttribute("width", value);
+    set w(value: number) {
+        this.setAttribute("width", value.toString());
     }
 
-    set h(value) {
-        this.setAttribute("height", value);
+    set h(value: number) {
+        this.setAttribute("height", value.toString());
     }
 }
 
 class Circle extends SvgTag {
-    constructor(x, y, r, style) {
+    constructor(x: number, y: number, r: number, style: SvgStyle) {
         super("circle");
         this.x = x;
         this.x = y;
@@ -147,21 +137,22 @@ class Circle extends SvgTag {
         this.style = style;
     }
 
-    set x(value) {
-        this.setAttribute("cx", value);
+    set x(value: number) {
+        this.setAttribute("cx", value.toString());
     }
 
-    set y(value) {
-        this.setAttribute("cy", value);
+    set y(value: number) {
+        this.setAttribute("cy", value.toString());
     }
 
-    set r(value) {
-        this.setAttribute("r", value);
+    set r(value: number) {
+        this.setAttribute("r", value.toString());
     }
 }
 
 
 export {
+    SvgStyle,
     SvgNode,
     SvgTag,
     Group,

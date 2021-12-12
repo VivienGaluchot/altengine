@@ -7,7 +7,7 @@ import * as Physics from './physics.js';
 
 // Private
 
-function worldGrid(groupId, minX, minY, maxX, maxY) {
+function worldGrid(groupId:string, minX: number, minY: number, maxX: number, maxY: number) {
     const styleMajor = {
         stroke: "#8888",
         strokeW: "1px",
@@ -45,7 +45,14 @@ function worldGrid(groupId, minX, minY, maxX, maxY) {
 // Public
 
 class SvgFrame {
-    constructor(el) {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+    el: Svg.SvgNode;
+    viewRect: Svg.Rect;
+
+    constructor(el: Element) {
         // safe area size, always drawn
         this.minX = -10;
         this.minY = -10;
@@ -103,29 +110,60 @@ class SvgFrame {
 }
 
 class SvgCircleComponent extends Engine.Component {
-    // args:
-    // {parent, radius, style}
-    constructor(obj, args) {
+    svgEl: Svg.Circle;
+    mCmp : Physics.MovingComponent;
+
+    constructor(obj: Engine.Entity, parent: Svg.SvgNode, radius: number, style: Svg.SvgStyle) {
         super(obj);
-        this.svgEl = new Svg.Circle(0, 0, args.radius, args.style);
-        args.parent.appendChild(this.svgEl);
+        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+
+        this.svgEl = new Svg.Circle(this.mCmp.pos.x, this.mCmp.pos.y, radius, style);
+        parent.appendChild(this.svgEl);
     }
 
     draw() {
-        let cmp = this.getComponent(Physics.MovingComponent);
-        this.svgEl.x = cmp.pos.x;
-        this.svgEl.y = cmp.pos.y;
+        this.svgEl.x = this.mCmp.pos.x;
+        this.svgEl.y = this.mCmp.pos.y;
     }
 }
 
 class Circle extends Engine.Entity {
-    constructor(loop, parent, radius, style) {
+    constructor(loop: Engine.RenderLoop, parent: Svg.SvgNode, radius: number, style: Svg.SvgStyle) {
         super(loop);
-        this.registerComponent(Physics.MovingComponent);
-        let args = { parent: parent, radius: radius, style: style };
-        this.registerComponent(SvgCircleComponent, args);
+        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new SvgCircleComponent(this, parent, radius, style));
+    }
+}
+
+class SvgRectComponent extends Engine.Component {
+    svgEl: Svg.Rect;
+    mCmp : Physics.MovingComponent;
+    w: number;
+    h: number;
+
+    constructor(obj: Engine.Entity, parent: Svg.SvgNode, w: number, h: number, style: Svg.SvgStyle) {
+        super(obj);
+        this.w = w;
+        this.h = h;
+        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+
+        this.svgEl = new Svg.Rect(this.mCmp.pos.x - (this.w / 2), this.mCmp.pos.y - (this.h / 2), w, h, style);
+        parent.appendChild(this.svgEl);
+    }
+
+    draw() {
+        this.svgEl.x = this.mCmp.pos.x - (this.w / 2);
+        this.svgEl.y = this.mCmp.pos.y - (this.h / 2);
+    }
+}
+
+class Rect extends Engine.Entity {
+    constructor(loop: Engine.RenderLoop, parent: Svg.SvgNode, w: number, h: number, style: Svg.SvgStyle) {
+        super(loop);
+        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new SvgRectComponent(this, parent, w, h, style));
     }
 }
 
 
-export { SvgFrame, Circle }
+export { SvgFrame, Circle, Rect }

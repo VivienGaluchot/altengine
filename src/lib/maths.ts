@@ -4,7 +4,10 @@
 // Public
 
 class Vector {
-    constructor(x, y) {
+    x: number;
+    y: number;
+
+    constructor(x: number, y: number) {
         this.x = x;
         this.y = y;
     }
@@ -13,23 +16,23 @@ class Vector {
         return new Vector(this.x, this.y);
     }
 
-    addInPlace(v) {
+    addInPlace(v: Vector) {
         this.x += v.x;
         this.y += v.y;
         return this;
     }
 
-    add(v) {
+    add(v: Vector) {
         return this.clone().addInPlace(v);
     }
 
-    scaleInPlace(a) {
+    scaleInPlace(a: number) {
         this.x *= a;
         this.y *= a;
         return this;
     }
 
-    scale(a) {
+    scale(a: number) {
         return this.clone().scaleInPlace(a);
     }
 }

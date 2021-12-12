@@ -5,19 +5,22 @@ import * as Engine from './lib/engine.js';
 import * as Physics from './lib/physics.js';
 
 
-const frame = new Altgn.SvgFrame(document.getElementById("frame"));
+let el = document.getElementById("frame")
+if (!el)
+    throw new Error("frame element not found");
+const frame = new Altgn.SvgFrame(el);
 window.onresize = () => {
     frame.resize();
 }
 
 class FallingBouncing extends Engine.Component {
-    constructor(obj) {
+    constructor(obj: Engine.Entity) {
         super(obj);
-        this.getComponent(Physics.MovingComponent).acc.y = -9;
+        this.getComponent<Physics.MovingComponent>(Physics.MovingComponent).acc.y = -9;
     }
 
-    update(ctx) {
-        let cmp = this.getComponent(Physics.MovingComponent);
+    update(ctx: Engine.FrameContext) {
+        let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         if (cmp.pos.y < (-5 + .2)) {
             cmp.pos.y = (-5 + .2);
             if (cmp.speed.y < 0) {
@@ -29,17 +32,26 @@ class FallingBouncing extends Engine.Component {
 }
 
 class Ball extends Altgn.Circle {
-    constructor(loop) {
+    constructor(loop: Engine.RenderLoop) {
         super(loop, frame.el, .2, { fill: "#8AF" });
-        this.registerComponent(FallingBouncing);
+        this.registerComponent(new FallingBouncing(this));
+    }
+}
+
+class Floor extends Altgn.Rect {
+    constructor(loop: Engine.RenderLoop) {
+        super(loop, frame.el, 20, 5, { fill: "#8AF" });
+        let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+        cmp.pos.y = -7.5;
     }
 }
 
 const loop = new Engine.RenderLoop();
 loop.start();
+let f = new Floor(loop);
 for (let i = -9; i <= 9; i += .5) {
     let p = new Ball(loop);
-    let cmp = p.getComponent(Physics.MovingComponent);
+    let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
     cmp.pos.x = i;
     cmp.pos.y = Math.abs(i);
 }
