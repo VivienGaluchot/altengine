@@ -29,15 +29,23 @@ class Component {
 }
 
 class Entity {
-    loop: RenderLoop;
+    parent: Entity | null;
     components: Array<Component>;
-    componentsByClass: Map<Function, Component>
+    componentsByClass: Map<Function, Component>;
+    children : Set<Entity>;
 
-    constructor(loop: RenderLoop) {
-        loop.subscribe(this);
-        this.loop = loop;
+    constructor(parent: Entity | null) {
+        this.parent = parent;
         this.components = [];
         this.componentsByClass = new Map();
+        this.children = new Set();
+        if (parent) {
+            parent.addChild(this);
+        }
+    }
+
+    addChild(ent: Entity) {
+        this.children.add(ent);
     }
 
     registerComponent(cmp: Component) {
@@ -63,11 +71,17 @@ class Entity {
         for (let cmp of this.components) {
             cmp.update(ctx);
         }
+        for (let ent of this.children) {
+            ent.update(ctx);
+        }
     }
 
     draw(ctx: FrameContext) {
         for (let cmp of this.components) {
             cmp.draw(ctx);
+        }
+        for (let ent of this.children) {
+            ent.draw(ctx);
         }
     }
 }
@@ -96,20 +110,15 @@ class FreqObserverComponent extends Component {
 }
 
 class RenderLoop {
-    objects : Set<Entity>;
+    root: Entity;
     lastLoopTime : number | null;
     reqFrame : number | null;
 
     constructor() {
-        this.objects = new Set<Entity>();
         this.lastLoopTime = null;
         this.reqFrame = null;
-        let obs = new Entity(this);
-        obs.registerComponent(new FreqObserverComponent(obs));
-    }
-
-    subscribe(object : Entity) {
-        this.objects.add(object);
+        this.root = new Entity(null);
+        this.root.registerComponent(new FreqObserverComponent(this.root));
     }
 
     start() {
@@ -141,12 +150,8 @@ class RenderLoop {
             dt: dtInMs / 1000,
             dtInMs: dtInMs
         };
-        for (let o of this.objects) {
-            o.update(ctx);
-        }
-        for (let o of this.objects) {
-            o.draw(ctx);
-        }
+        this.root.update(ctx);
+        this.root.draw(ctx);
         this.lastLoopTime = loopTime;
     }
 }
