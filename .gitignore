@@ -1,0 +1,4 @@
+node_modules
+
+static_hosting/*.js
+static_hosting/**/*.js

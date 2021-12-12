@@ -1,8 +1,8 @@
 "use strict"
 
-import * as Altgn from './lib/altng.mjs';
-import * as Engine from './lib/engine.mjs';
-import * as Physics from './lib/physics.mjs';
+import * as Altgn from './lib/altng.js';
+import * as Engine from './lib/engine.js';
+import * as Physics from './lib/physics.js';
 
 
 const frame = new Altgn.SvgFrame(document.getElementById("frame"));

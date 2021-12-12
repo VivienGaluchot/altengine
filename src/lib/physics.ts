@@ -1,7 +1,7 @@
 "use strict"
 
-import * as Maths from './maths.mjs';
-import * as Engine from './engine.mjs';
+import * as Maths from './maths.js';
+import * as Engine from './engine.js';
 
 
 // Public

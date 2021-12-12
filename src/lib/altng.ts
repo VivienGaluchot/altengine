@@ -1,8 +1,8 @@
 "use strict"
 
-import * as Svg from './svg.mjs';
-import * as Engine from './engine.mjs';
-import * as Physics from './physics.mjs';
+import * as Svg from './svg.js';
+import * as Engine from './engine.js';
+import * as Physics from './physics.js';
 
 
 // Private

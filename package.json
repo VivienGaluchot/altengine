@@ -1,0 +1,10 @@
+{
+    "name": "altengine-demo",
+    "scripts": {
+        "tsc": "./node_modules/typescript/bin/tsc",
+        "build": "./node_modules/typescript/bin/tsc"
+    },
+    "dependencies": {
+        "typescript": "4.5.3"
+    }
+}
