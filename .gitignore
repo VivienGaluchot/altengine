@@ -1,4 +1,5 @@
 node_modules
+.vscode
 
 static_hosting/*.js
 static_hosting/**/*.js

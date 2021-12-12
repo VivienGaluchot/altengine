@@ -67,7 +67,7 @@ class Rect {
     }
 }
 
-function swipe(x: number, a: number, b:number, va:number, vb: number) : number {
+function swipe(x: number, a: number, b: number, va: number, vb: number): number {
     let r = (vb - va) / (b - a);
     let v0 = va - (r * a);
     return v0 + r * x;

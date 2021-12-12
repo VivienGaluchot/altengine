@@ -8,7 +8,7 @@ import * as Maths from './maths.js';
 
 // Private
 
-function worldGrid(groupId:string, area: Maths.Rect) {
+function worldGrid(groupId: string, area: Maths.Rect) {
     const styleMajor = {
         stroke: "#8888",
         strokeW: "1px",
@@ -126,7 +126,7 @@ class SvgFrame {
 
 class SvgCircleComponent extends Engine.Component {
     svgEl: Svg.Circle;
-    mCmp : Physics.MovingComponent;
+    mCmp: Physics.MovingComponent;
 
     constructor(obj: Engine.Entity, frame: SvgFrame, radius: number, style: Svg.SvgStyle) {
         super(obj);
@@ -152,7 +152,7 @@ class Circle extends Engine.Entity {
 
 class SvgRectComponent extends Engine.Component {
     svgEl: Svg.Rect;
-    mCmp : Physics.MovingComponent;
+    mCmp: Physics.MovingComponent;
     w: number;
     h: number;
 

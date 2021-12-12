@@ -3,7 +3,7 @@
 import * as Altgn from './lib/altng.js';
 import * as Engine from './lib/engine.js';
 import * as Physics from './lib/physics.js';
-import * as Maths from  './lib/maths.js';
+import * as Maths from './lib/maths.js';
 
 
 let el = document.getElementById("frame")

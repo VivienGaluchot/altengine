@@ -32,7 +32,7 @@ class Entity {
     parent: Entity | null;
     components: Array<Component>;
     componentsByClass: Map<Function, Component>;
-    children : Set<Entity>;
+    children: Set<Entity>;
 
     constructor(parent: Entity | null) {
         this.parent = parent;
@@ -87,8 +87,8 @@ class Entity {
 }
 
 class FreqObserverComponent extends Component {
-    noLogInMs : number;
-    ctr : number;
+    noLogInMs: number;
+    ctr: number;
 
     constructor(obj: Entity) {
         super(obj);
@@ -111,8 +111,8 @@ class FreqObserverComponent extends Component {
 
 class RenderLoop {
     root: Entity;
-    lastLoopTime : number | null;
-    reqFrame : number | null;
+    lastLoopTime: number | null;
+    reqFrame: number | null;
 
     constructor() {
         this.lastLoopTime = null;
