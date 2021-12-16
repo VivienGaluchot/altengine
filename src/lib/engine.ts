@@ -3,6 +3,12 @@
 
 // Public
 
+enum RenderStep {
+    Move,
+    Collide,
+    Draw
+}
+
 interface FrameContext {
     dt: number,
     dtInMs: number,
@@ -15,19 +21,21 @@ class Component {
         this.ent = ent;
     }
 
-    getComponent<Type extends Component>(cmpClass: typeof Component): Type {
+    getComponent<Type extends Component>(cmpClass: Function): Type {
         return this.ent.getComponent(cmpClass);
     }
 
-    update(ctx: FrameContext) {
+    update(step: RenderStep, ctx: FrameContext) {
         // to implement
     }
+}
 
-    collide(ctx: FrameContext) {
-        // to implement
+class GlobalComponent extends Component {
+    constructor(ent: Entity) {
+        super(ent);
     }
 
-    draw(ctx: FrameContext) {
+    static globalUpdate(step: RenderStep, ctx: FrameContext, components: Array<Component>) {
         // to implement
     }
 }
@@ -60,6 +68,9 @@ class Entity {
     }
 
     registerComponent(cmp: Component) {
+        if (cmp instanceof GlobalComponent) {
+            this.loop.registerGlobalComponent(cmp);
+        }
         let cmpClass = cmp.constructor;
         this.components.push(cmp);
         if (this.componentsByClass.has(cmpClass)) {
@@ -69,7 +80,7 @@ class Entity {
     }
 
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
-    getComponent<Type extends Component>(cmpClass: typeof Component): Type {
+    getComponent<Type extends Component>(cmpClass: Function): Type {
         let cmp = this.componentsByClass.get(cmpClass);
         if (cmp) {
             return <Type>cmp;
@@ -78,30 +89,12 @@ class Entity {
         }
     }
 
-    update(ctx: FrameContext) {
+    update(step: RenderStep, ctx: FrameContext) {
         for (let cmp of this.components) {
-            cmp.update(ctx);
+            cmp.update(step, ctx);
         }
         for (let ent of this.children) {
-            ent.update(ctx);
-        }
-    }
-
-    collide(ctx: FrameContext) {
-        for (let cmp of this.components) {
-            cmp.collide(ctx);
-        }
-        for (let ent of this.children) {
-            ent.collide(ctx);
-        }
-    }
-
-    draw(ctx: FrameContext) {
-        for (let cmp of this.components) {
-            cmp.draw(ctx);
-        }
-        for (let ent of this.children) {
-            ent.draw(ctx);
+            ent.update(step, ctx);
         }
     }
 }
@@ -116,15 +109,17 @@ class FreqObserverComponent extends Component {
         this.ctr = 0;
     }
 
-    override update(ctx: FrameContext) {
-        this.noLogInMs += ctx.dtInMs;
-        this.ctr += 1;
-        if (this.noLogInMs > 1000) {
-            this.noLogInMs -= 1000;
-            for (let el of document.querySelectorAll(".altgn-fps-ctr")) {
-                el.innerHTML = `${this.ctr}`;
+    override update(step: RenderStep, ctx: FrameContext) {
+        if (step == RenderStep.Draw) {
+            this.noLogInMs += ctx.dtInMs;
+            this.ctr += 1;
+            if (this.noLogInMs > 1000) {
+                this.noLogInMs -= 1000;
+                for (let el of document.querySelectorAll(".altgn-fps-ctr")) {
+                    el.innerHTML = `${this.ctr}`;
+                }
+                this.ctr = 0;
             }
-            this.ctr = 0;
         }
     }
 }
@@ -133,10 +128,12 @@ class RenderLoop {
     root: Entity;
     lastLoopTime: number | null;
     reqFrame: number | null;
+    componentsByClass: Map<Function, Array<GlobalComponent>>;
 
     constructor() {
         this.lastLoopTime = null;
         this.reqFrame = null;
+        this.componentsByClass = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
     }
@@ -156,6 +153,14 @@ class RenderLoop {
         }
     }
 
+    registerGlobalComponent(cmp: GlobalComponent) {
+        let cmpClass = cmp.constructor;
+        if (!this.componentsByClass.has(cmpClass)) {
+            this.componentsByClass.set(cmpClass, []);
+        }
+        this.componentsByClass.get(cmpClass)?.push(cmp);
+    }
+
     execLoop() {
         let dtInMs = 0;
         let loopTime = Date.now();
@@ -172,28 +177,23 @@ class RenderLoop {
         };
 
         // TODO register the component at a specific render step
-        // enum RenderStep {
-        //     Move,
-        //     Collide,
-        //     Draw
-        // }
         // use a single callback for every steps
         // pass the step as arg
 
         // 1. move
-        this.root.update(ctx);
+        this.root.update(RenderStep.Move, ctx);
 
         // 2. collide
-        // TODO compute an efficient colliding memory structure
-        // https://en.wikipedia.org/wiki/Quadtree
-        // and add it to the context
-        this.root.collide(ctx);
+        for (let [cmpClass, components] of this.componentsByClass) {
+            (<any>cmpClass).globalUpdate(RenderStep.Collide, ctx, components);
+        }
+        this.root.update(RenderStep.Collide, ctx);
 
         // 3. draw
-        this.root.draw(ctx);
+        this.root.update(RenderStep.Draw, ctx);
 
         this.lastLoopTime = loopTime;
     }
 }
 
-export { FrameContext, RenderLoop, Entity, Component }
+export { RenderStep, FrameContext, RenderLoop, Entity, Component, GlobalComponent }

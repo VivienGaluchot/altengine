@@ -80,8 +80,8 @@ class Rect {
     }
 
     intersect(r: Rect) {
-        let interX = this.minX() <= r.maxX() && this.maxX() >= r.minX();
-        let interY = this.minY() <= r.maxY() && this.maxY() >= r.minY();
+        let interX = (this.minX() <= r.maxX()) && (r.minX() <= this.maxX());
+        let interY = (this.minY() <= r.maxY()) && (r.minY() <= this.maxY());
         return interX && interY;
     }
 }

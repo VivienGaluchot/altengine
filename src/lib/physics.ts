@@ -18,9 +18,11 @@ class MovingComponent extends Engine.Component {
         this.acc = new Maths.Vector(0, 0);
     }
 
-    update(ctx: Engine.FrameContext) {
-        this.pos.addInPlace(this.speed.scale(ctx.dt));
-        this.speed.addInPlace(this.acc.scale(ctx.dt));
+    update(step: Engine.RenderStep, ctx: Engine.FrameContext) {
+        if (step == Engine.RenderStep.Move) {
+            this.pos.addInPlace(this.speed.scale(ctx.dt));
+            this.speed.addInPlace(this.acc.scale(ctx.dt));
+        }
     }
 }
 
@@ -31,7 +33,7 @@ interface Collision {
     // normal: Maths.Vector;
 }
 
-class CollidingComponent extends Engine.Component {
+class CollidingComponent extends Engine.GlobalComponent {
     collisions: Array<Collision>;
     // bounding box relative to the object position
     boundingBox: Maths.Rect;
@@ -49,14 +51,25 @@ class CollidingComponent extends Engine.Component {
         return this.boundingBox.translate(this.mCmp.pos).intersect(other.boundingBox.translate(other.mCmp.pos));
     }
 
-    collide(ctx: Engine.FrameContext) {
-        // TODO compute collisions set
-        this.collisions = [];
-        let allColliders: Array<CollidingComponent> = [];
-        for (let other of allColliders) {
-            if (other != this && this.isMaybeColliding(other)) {
-                this.collisions.push({ target: other });
+    static override globalUpdate(step: Engine.RenderStep, ctx: Engine.FrameContext, components: Array<CollidingComponent>) {
+        // TODO compute an efficient colliding memory structure
+        // https://en.wikipedia.org/wiki/Quadtree
+        // and add it to the context
+        if (step == Engine.RenderStep.Collide) {
+            for (let i = 0; i < components.length; i++) {
+                for (let j = i + 1; j < components.length; j++) {
+                    if (components[i].isMaybeColliding(components[j])) {
+                        components[i].collisions.push({ target: components[j] });
+                        components[j].collisions.push({ target: components[i] });
+                    }
+                }
             }
+        }
+    }
+
+    override update(step: Engine.RenderStep, ctx: Engine.FrameContext) {
+        if (step == Engine.RenderStep.Move) {
+            this.collisions = [];
         }
     }
 }

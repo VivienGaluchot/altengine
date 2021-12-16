@@ -21,7 +21,15 @@ class FallingBouncing extends Engine.Component {
         this.getComponent<Physics.MovingComponent>(Physics.MovingComponent).acc.y = -9.81;
     }
 
-    override update(ctx: Engine.FrameContext) {
+    override update(step: Engine.RenderStep, ctx: Engine.FrameContext) {
+        if (step == Engine.RenderStep.Move) {
+            this.move(ctx);
+        } else if (step == Engine.RenderStep.Draw) {
+            this.draw(ctx);
+        }
+    }
+
+    move(ctx: Engine.FrameContext) {
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         if (cmp.pos.y < (-5 + .2)) {
             cmp.pos.y = (-5 + .2);
@@ -31,11 +39,23 @@ class FallingBouncing extends Engine.Component {
             }
         }
     }
+
+    draw(ctx: Engine.FrameContext) {
+        let collCmp = this.getComponent<Physics.CollidingComponent>(Physics.CollidingComponent);
+        let svgCmp = this.getComponent<Altgn.SvgCircleComponent>(Altgn.SvgCircleComponent);
+        if (collCmp.collisions.length > 0) {
+            svgCmp.svgEl.style = { fill: "#2F2" };
+        } else {
+            svgCmp.svgEl.style = { fill: "#8AF" };
+        }
+    }
 }
 
 class Ball extends Altgn.Circle {
     constructor(ent: Engine.Entity) {
         super(ent, frame, .2, { fill: "#8AF" });
+        let boundingBox = new Maths.Rect(new Maths.Vector(-.2, -.2), new Maths.Vector(.2 * 2, .2 * 2));
+        this.registerComponent(new Physics.CollidingComponent(this, boundingBox));
         this.registerComponent(new FallingBouncing(this));
     }
 }

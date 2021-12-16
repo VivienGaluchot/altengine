@@ -133,9 +133,11 @@ class SvgCircleComponent extends Engine.Component {
         frame.el.appendChild(this.svgEl);
     }
 
-    draw() {
-        this.svgEl.x = this.mCmp.pos.x;
-        this.svgEl.y = this.mCmp.pos.y;
+    override update(step: Engine.RenderStep, ctx: Engine.FrameContext) {
+        if (step == Engine.RenderStep.Draw) {
+            this.svgEl.x = this.mCmp.pos.x;
+            this.svgEl.y = this.mCmp.pos.y;
+        }
     }
 }
 
@@ -163,9 +165,11 @@ class SvgRectComponent extends Engine.Component {
         frame.el.appendChild(this.svgEl);
     }
 
-    draw() {
-        this.svgEl.x = this.mCmp.pos.x - (this.w / 2);
-        this.svgEl.y = this.mCmp.pos.y - (this.h / 2);
+    override update(step: Engine.RenderStep, ctx: Engine.FrameContext) {
+        if (step == Engine.RenderStep.Draw) {
+            this.svgEl.x = this.mCmp.pos.x - (this.w / 2);
+            this.svgEl.y = this.mCmp.pos.y - (this.h / 2);
+        }
     }
 }
 
@@ -178,4 +182,4 @@ class Rect extends Engine.Entity {
 }
 
 
-export { SvgFrame, Circle, Rect }
+export { SvgFrame, Circle, Rect, SvgRectComponent, SvgCircleComponent }
