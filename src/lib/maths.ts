@@ -26,6 +26,16 @@ class Vector {
         return this.clone().addInPlace(v);
     }
 
+    minusInPlace(v: Vector) {
+        this.x -= v.x;
+        this.y -= v.y;
+        return this;
+    }
+
+    minus(v: Vector) {
+        return this.clone().minusInPlace(v);
+    }
+
     scaleInPlace(a: number) {
         this.x *= a;
         this.y *= a;
@@ -34,6 +44,24 @@ class Vector {
 
     scale(a: number) {
         return this.clone().scaleInPlace(a);
+    }
+
+    norm() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+
+    normalize() {
+        return this.clone().normalizeInPlace();
+    }
+
+    normalizeInPlace() {
+        return this.scaleInPlace(1 / this.norm());
+    }
+
+    dist(v: Vector) {
+        let dx = this.x - v.x;
+        let dy = this.y - v.y;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 }
 
@@ -48,6 +76,10 @@ class Rect {
 
     clone() {
         return new Rect(this.pos.clone(), this.size.clone());
+    }
+
+    center() {
+        return this.size.scale(0.5).addInPlace(this.pos);
     }
 
     minX() {
@@ -79,7 +111,7 @@ class Rect {
         return p.x >= this.minX() && p.x <= this.maxX() && p.y >= this.minY() && p.y <= this.maxY();
     }
 
-    intersect(r: Rect) {
+    isIntersecting(r: Rect) {
         let interX = (this.minX() <= r.maxX()) && (r.minX() <= this.maxX());
         let interY = (this.minY() <= r.maxY()) && (r.minY() <= this.maxY());
         return interX && interY;

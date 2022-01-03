@@ -26,6 +26,24 @@ class Component {
     }
 
     update(step: RenderStep, ctx: FrameContext) {
+        if (step == RenderStep.Move) {
+            this.move(ctx);
+        } else if (step == RenderStep.Collide) {
+            this.collide(ctx);
+        } else if (step == RenderStep.Draw) {
+            this.draw(ctx);
+        }
+    }
+
+    move(ctx: FrameContext) {
+        // to implement
+    }
+
+    collide(ctx: FrameContext) {
+        // to implement
+    }
+
+    draw(ctx: FrameContext) {
         // to implement
     }
 }
@@ -36,6 +54,24 @@ class GlobalComponent extends Component {
     }
 
     static globalUpdate(step: RenderStep, ctx: FrameContext, components: Array<Component>) {
+        if (step == RenderStep.Move) {
+            this.globalMove(ctx, components);
+        } else if (step == RenderStep.Collide) {
+            this.globalCollide(ctx, components);
+        } else if (step == RenderStep.Draw) {
+            this.globalDraw(ctx, components);
+        }
+    }
+
+    static globalMove(ctx: FrameContext, components: Array<Component>) {
+        // to implement
+    }
+
+    static globalCollide(ctx: FrameContext, components: Array<Component>) {
+        // to implement
+    }
+
+    static globalDraw(ctx: FrameContext, components: Array<Component>) {
         // to implement
     }
 }
@@ -85,6 +121,7 @@ class Entity {
         if (cmp) {
             return <Type>cmp;
         } else {
+            console.error("no component registered for class", { class: cmpClass, entity: this });
             throw new Error(`no component registered for class ${cmpClass}`);
         }
     }
@@ -109,17 +146,15 @@ class FreqObserverComponent extends Component {
         this.ctr = 0;
     }
 
-    override update(step: RenderStep, ctx: FrameContext) {
-        if (step == RenderStep.Draw) {
-            this.noLogInMs += ctx.dtInMs;
-            this.ctr += 1;
-            if (this.noLogInMs > 1000) {
-                this.noLogInMs -= 1000;
-                for (let el of document.querySelectorAll(".altgn-fps-ctr")) {
-                    el.innerHTML = `${this.ctr}`;
-                }
-                this.ctr = 0;
+    override draw(ctx: FrameContext) {
+        this.noLogInMs += ctx.dtInMs;
+        this.ctr += 1;
+        if (this.noLogInMs > 1000) {
+            this.noLogInMs -= 1000;
+            for (let el of document.querySelectorAll(".altgn-fps-ctr")) {
+                el.innerHTML = `${this.ctr}`;
             }
+            this.ctr = 0;
         }
     }
 }
