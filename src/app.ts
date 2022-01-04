@@ -82,7 +82,7 @@ const loop = new Engine.RenderLoop();
 loop.start();
 new Floor(loop.root);
 for (let i = -9; i <= 9; i += .5) {
-    let p = new Ball(loop.root, .2, 1);
+    let p = new Ball(loop.root, .2, .2 * .2);
     let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
     cmp.pos.x = i;
     cmp.pos.y = Math.abs(i);
@@ -93,7 +93,12 @@ el.onclick = (event: MouseEvent) => {
         let domPos = new Maths.Vector(event.clientX, event.clientY);
         let worldPos = frame.domToWorld(domPos);
         if (frame.safeView.contains(worldPos)) {
-            let p = new Ball(loop.root, .3, 1);
+            let p;
+            if (event.ctrlKey) {
+                p = new Ball(loop.root, .4, .4 * .4);
+            } else {
+                p = new Ball(loop.root, .2, .2 * .2);
+            }
             let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
             cmp.pos = worldPos;
         }

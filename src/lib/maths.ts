@@ -26,14 +26,14 @@ class Vector {
         return this.clone().addInPlace(v);
     }
 
-    minusInPlace(v: Vector) {
+    subtractInPlace(v: Vector) {
         this.x -= v.x;
         this.y -= v.y;
         return this;
     }
 
-    minus(v: Vector) {
-        return this.clone().minusInPlace(v);
+    subtract(v: Vector) {
+        return this.clone().subtractInPlace(v);
     }
 
     scaleInPlace(a: number) {
@@ -62,6 +62,10 @@ class Vector {
         let dx = this.x - v.x;
         let dy = this.y - v.y;
         return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    dotProduct(v: Vector) {
+        return this.x * v.x + this.y * v.y;
     }
 }
 
