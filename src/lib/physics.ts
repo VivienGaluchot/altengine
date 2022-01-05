@@ -53,15 +53,17 @@ interface Collision {
     self: {
         before: PosSpeed;
         after: PosSpeed;
+        contactNormal: Maths.Vector;
+        contactPoint: Maths.Vector;
     }
     other: {
         cmp: CollidingComponent;
         before: PosSpeed;
         after: PosSpeed;
+        contactNormal: Maths.Vector;
+        contactPoint: Maths.Vector;
     }
     timeSpan: number;
-    contactNormal: Maths.Vector;
-    contactPoint: Maths.Vector;
 }
 
 abstract class ColliderComponent extends Engine.Component {
@@ -139,7 +141,7 @@ class CollidingComponent extends Engine.GlobalComponent {
         this.collisions = [];
     }
 
-    addCollision(other: CollidingComponent, contact: CollisionContact) {
+    addCollision(other: CollidingComponent, selfContact: CollisionContact, otherContact: CollisionContact) {
         this.collisions.push({
             self: {
                 before: {
@@ -150,6 +152,7 @@ class CollidingComponent extends Engine.GlobalComponent {
                     pos: this.mCmp.pos.clone(),
                     speed: this.mCmp.speed.clone()
                 },
+                ...selfContact
             },
             other: {
                 cmp: other,
@@ -161,9 +164,9 @@ class CollidingComponent extends Engine.GlobalComponent {
                     pos: other.mCmp.pos.clone(),
                     speed: other.mCmp.speed.clone()
                 },
+                ...otherContact
             },
-            timeSpan: this.mCmp.prevDt,
-            ...contact
+            timeSpan: this.mCmp.prevDt
         });
     }
 
@@ -174,12 +177,10 @@ class CollidingComponent extends Engine.GlobalComponent {
             for (let j = i + 1; j < components.length; j++) {
                 if (components[i].collider.isMaybeColliding(components[j].collider)) {
                     let first = components[i].collider.getContact(components[j].collider);
-                    if (first) {
-                        components[i].addCollision(components[j], first);
-                    }
                     let second = components[j].collider.getContact(components[i].collider);
-                    if (second) {
-                        components[j].addCollision(components[i], second);
+                    if (first && second) {
+                        components[i].addCollision(components[j], first, second);
+                        components[j].addCollision(components[i], second, first);
                     }
                 }
             }
@@ -193,14 +194,17 @@ class CollidingComponent extends Engine.GlobalComponent {
         // TODO
         // - take discrete frame computation into account (compute exact contact point / back in time ?)
 
-        let deltaSpeed = new Maths.Vector(0, 0);
         for (let col of this.collisions) {
-            let contactDeltaSpeed = col.self.after.speed.subtract(col.other.after.speed);
+            // speed correction
             let massRatio = (2 * col.other.cmp.mass) / (this.mass + col.other.cmp.mass);
-            let speedRatio = massRatio * contactDeltaSpeed.dotProduct(col.contactNormal);
-            deltaSpeed.addInPlace(col.contactNormal.scale(speedRatio));
+            let contactDeltaSpeed = col.self.after.speed.subtract(col.other.after.speed);
+            let speedRatio = massRatio * contactDeltaSpeed.dotProduct(col.self.contactNormal);
+            this.mCmp.speed.subtractInPlace(col.self.contactNormal.scale(speedRatio));
+            // pos correction
+            // TODO take into account mass difference
+            let contactDeltaPos = col.self.contactPoint.subtract(col.other.contactPoint);
+            this.mCmp.pos.subtractInPlace(contactDeltaPos.scale(.5));
         }
-        this.mCmp.speed.subtractInPlace(deltaSpeed);
     }
 }
 
