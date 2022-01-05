@@ -54,6 +54,12 @@ class SvgNode {
             this.domEl.appendChild(el);
         }
     }
+
+    removeChildren() {
+        while (this.domEl.firstChild) {
+            this.domEl.firstChild.remove();
+        }
+    }
 }
 
 class SvgTag extends SvgNode {

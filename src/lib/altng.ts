@@ -65,9 +65,6 @@ class SvgFrame {
         this.el.domEl.setAttribute("preserveAspectRatio", "xMidYMid");
         this.el.domEl.setAttribute("transform", "scale(1,-1)");
 
-        // world grid
-        this.el.appendChild(worldGrid("grid", this.safeView));
-
         // view box
         this.viewRect = new Svg.Rect(-2, -2, 4, 4, {
             fill: "#0482",
@@ -75,6 +72,17 @@ class SvgFrame {
             strokeW: "2px",
             vectorEffect: "non-scaling-stroke"
         });
+
+        this.reset();
+    }
+
+    reset() {
+        this.el.removeChildren();
+
+        // world grid
+        this.el.appendChild(worldGrid("grid", this.safeView));
+
+        // view box
         this.el.appendChild(this.viewRect);
         this.resize();
     }

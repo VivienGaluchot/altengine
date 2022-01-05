@@ -160,7 +160,7 @@ class FreqObserverComponent extends Component {
 }
 
 class RenderLoop {
-    root: Entity;
+    readonly root: Entity;
     lastLoopTime: number | null;
     reqFrame: number | null;
     componentsByClass: Map<Function, Array<GlobalComponent>>;

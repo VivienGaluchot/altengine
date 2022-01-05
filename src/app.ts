@@ -6,14 +6,15 @@ import * as Physics from './lib/physics.js';
 import * as Maths from './lib/maths.js';
 
 
-let el = document.getElementById("frame")
-if (!el)
-    throw new Error("frame element not found");
-
-const frame = new Altgn.SvgFrame(el);
-window.onresize = () => {
-    frame.resize();
+function getExpectedElement(id: string) {
+    let el = document.getElementById(id)
+    if (!el)
+        throw new Error("element with id not found: " + id);
+    return el;
 }
+
+
+// Components
 
 class FallingBouncing extends Engine.Component {
     readonly radius: number;
@@ -61,8 +62,11 @@ class FallingBouncing extends Engine.Component {
     }
 }
 
+
+// Entities
+
 class Ball extends Altgn.Circle {
-    constructor(ent: Engine.Entity, radius: number, mass: number) {
+    constructor(frame: Altgn.SvgFrame, ent: Engine.Entity, radius: number, mass: number) {
         super(ent, frame, radius, { fill: "#8AF" });
         let collider = new Physics.DiscColliderComponent(this, radius);
         this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
@@ -71,36 +75,80 @@ class Ball extends Altgn.Circle {
 }
 
 class Floor extends Altgn.Rect {
-    constructor(ent: Engine.Entity) {
+    constructor(frame: Altgn.SvgFrame, ent: Engine.Entity) {
         super(ent, frame, 20, .1, { fill: "#8AF" });
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         cmp.pos.y = -5.05;
     }
 }
 
-const loop = new Engine.RenderLoop();
-loop.start();
-new Floor(loop.root);
-for (let i = -9; i <= 9; i += .5) {
-    let p = new Ball(loop.root, .2, .2 * .2);
-    let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-    cmp.pos.x = i;
-    cmp.pos.y = Math.abs(i);
+
+// Scenes
+
+function setupSceneA() {
+    let el = getExpectedElement("frame");
+    const frame = new Altgn.SvgFrame(el);
+    window.onresize = () => {
+        frame.resize();
+    }
+
+    const loop = new Engine.RenderLoop();
+    loop.start();
+
+    new Floor(frame, loop.root);
+
+    el.onclick = (event: MouseEvent) => {
+        if (event.button == 0) {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            if (frame.safeView.contains(worldPos)) {
+                let p;
+                if (event.ctrlKey) {
+                    p = new Ball(frame, loop.root, .4, .4 * .4);
+                } else {
+                    p = new Ball(frame, loop.root, .2, .2 * .2);
+                }
+                let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+                cmp.pos = worldPos;
+            }
+        }
+    };
 }
 
-el.onclick = (event: MouseEvent) => {
-    if (event.button == 0) {
-        let domPos = new Maths.Vector(event.clientX, event.clientY);
-        let worldPos = frame.domToWorld(domPos);
-        if (frame.safeView.contains(worldPos)) {
-            let p;
-            if (event.ctrlKey) {
-                p = new Ball(loop.root, .4, .4 * .4);
-            } else {
-                p = new Ball(loop.root, .2, .2 * .2);
-            }
-            let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-            cmp.pos = worldPos;
-        }
+function setupSceneB() {
+    let el = getExpectedElement("frame");
+    const frame = new Altgn.SvgFrame(el);
+    window.onresize = () => {
+        frame.resize();
     }
-};
+
+    const loop = new Engine.RenderLoop();
+    loop.start();
+
+    new Floor(frame, loop.root);
+    for (let i = -9; i <= 9; i += .5) {
+        let p = new Ball(frame, loop.root, .2, .2 * .2);
+        let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+        cmp.pos.x = i;
+        cmp.pos.y = Math.abs(i);
+    }
+
+    el.onclick = (event: MouseEvent) => {
+        if (event.button == 0) {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            if (frame.safeView.contains(worldPos)) {
+                let p;
+                if (event.ctrlKey) {
+                    p = new Ball(frame, loop.root, .4, .4 * .4);
+                } else {
+                    p = new Ball(frame, loop.root, .2, .2 * .2);
+                }
+                let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+                cmp.pos = worldPos;
+            }
+        }
+    };
+}
+
+getExpectedElement("btn-scene-a").onclick = setupSceneA;
+getExpectedElement("btn-scene-b").onclick = setupSceneB;
+setupSceneA();

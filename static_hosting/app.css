@@ -17,10 +17,28 @@ body {
     height: 100%;
 }
 
-.fps-ctr {
+.ctrl {
     position: absolute;
     bottom: .5rem;
     left: .5rem;
-    color: rgba(255, 255, 255, 0.247);
+    color: rgba(255, 255, 255, 0.3);
     font-family: 'Courier New', Courier, monospace;
+}
+
+.ctrl button {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: .2rem;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.ctrl button:hover {
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+}
+
+.ctrl button:active {
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.4);
 }
