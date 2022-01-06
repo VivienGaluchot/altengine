@@ -2,8 +2,8 @@
 
 import * as Svg from './svg.js';
 import * as Engine from './engine.js';
-import * as Physics from './physics.js';
 import * as Maths from './maths.js';
+import * as Basics from './basics.js';
 
 
 // Private
@@ -45,6 +45,41 @@ function worldGrid(groupId: string, area: Maths.Rect) {
 
 // Public
 
+class Scene extends Engine.RenderLoop {
+    frame: SvgFrame | null;
+
+    constructor() {
+        super();
+        this.frame = null;
+    }
+
+    play(frame: SvgFrame) {
+        this.frame = frame;
+        for (let cmp of this.components()) {
+            if (cmp instanceof Basics.SvgComponent) {
+                cmp.addToNode(this.frame.el);
+            }
+        }
+        this.start();
+    }
+
+    override registerComponent(cmp: Engine.Component) {
+        super.registerComponent(cmp);
+        if (cmp instanceof Basics.SvgComponent && this.frame) {
+            cmp.addToNode(this.frame.el);
+        }
+    }
+
+    pause() {
+        this.stop();
+        for (let cmp of this.components()) {
+            if (cmp instanceof Basics.SvgComponent) {
+                cmp.remove();
+            }
+        }
+    }
+}
+
 class SvgFrame {
     // safe area, always drawn for all aspect ratios
     safeView: Maths.Rect;
@@ -54,6 +89,8 @@ class SvgFrame {
     el: Svg.SvgNode;
 
     viewRect: Svg.Rect;
+
+    scene: Scene | null;
 
     constructor(el: Element) {
         this.safeView = new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20));
@@ -73,6 +110,9 @@ class SvgFrame {
             vectorEffect: "non-scaling-stroke"
         });
 
+        // scene
+        this.scene = null;
+
         this.reset();
     }
 
@@ -85,6 +125,14 @@ class SvgFrame {
         // view box
         this.el.appendChild(this.viewRect);
         this.resize();
+    }
+
+    showScene(scene: Scene) {
+        if (this.scene) {
+            this.scene.pause();
+        }
+        this.scene = scene;
+        this.scene.play(this);
     }
 
     domToWorld(v: Maths.Vector) {
@@ -129,61 +177,5 @@ class SvgFrame {
     }
 }
 
-class SvgCircleComponent extends Engine.Component {
-    svgEl: Svg.Circle;
-    mCmp: Physics.MovingComponent;
 
-    constructor(obj: Engine.Entity, frame: SvgFrame, radius: number, style: Svg.SvgStyle) {
-        super(obj);
-        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-
-        this.svgEl = new Svg.Circle(this.mCmp.pos.x, this.mCmp.pos.y, radius, style);
-        frame.el.appendChild(this.svgEl);
-    }
-
-    override draw(ctx: Engine.FrameContext) {
-        this.svgEl.x = this.mCmp.pos.x;
-        this.svgEl.y = this.mCmp.pos.y;
-    }
-}
-
-class Circle extends Engine.Entity {
-    constructor(parent: Engine.Entity, frame: SvgFrame, radius: number, style: Svg.SvgStyle) {
-        super(parent);
-        this.registerComponent(new Physics.MovingComponent(this));
-        this.registerComponent(new SvgCircleComponent(this, frame, radius, style));
-    }
-}
-
-class SvgRectComponent extends Engine.Component {
-    svgEl: Svg.Rect;
-    mCmp: Physics.MovingComponent;
-    w: number;
-    h: number;
-
-    constructor(ent: Engine.Entity, frame: SvgFrame, w: number, h: number, style: Svg.SvgStyle) {
-        super(ent);
-        this.w = w;
-        this.h = h;
-        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-
-        this.svgEl = new Svg.Rect(this.mCmp.pos.x - (this.w / 2), this.mCmp.pos.y - (this.h / 2), w, h, style);
-        frame.el.appendChild(this.svgEl);
-    }
-
-    override draw(ctx: Engine.FrameContext) {
-        this.svgEl.x = this.mCmp.pos.x - (this.w / 2);
-        this.svgEl.y = this.mCmp.pos.y - (this.h / 2);
-    }
-}
-
-class Rect extends Engine.Entity {
-    constructor(ent: Engine.Entity, frame: SvgFrame, w: number, h: number, style: Svg.SvgStyle) {
-        super(ent);
-        this.registerComponent(new Physics.MovingComponent(this));
-        this.registerComponent(new SvgRectComponent(this, frame, w, h, style));
-    }
-}
-
-
-export { SvgFrame, Circle, Rect, SvgRectComponent, SvgCircleComponent }
+export { SvgFrame, Scene }

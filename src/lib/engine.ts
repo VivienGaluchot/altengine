@@ -104,9 +104,7 @@ class Entity {
     }
 
     registerComponent(cmp: Component) {
-        if (cmp instanceof GlobalComponent) {
-            this.loop.registerGlobalComponent(cmp);
-        }
+        this.loop.registerComponent(cmp);
         let cmpClass = cmp.constructor;
         this.components.push(cmp);
         if (this.componentsByClass.has(cmpClass)) {
@@ -163,12 +161,18 @@ class RenderLoop {
     readonly root: Entity;
     lastLoopTime: number | null;
     reqFrame: number | null;
-    componentsByClass: Map<Function, Array<GlobalComponent>>;
+    componentsByClass: {
+        nonGlobal: Map<Function, Array<GlobalComponent>>,
+        global: Map<Function, Array<GlobalComponent>>
+    };
 
     constructor() {
         this.lastLoopTime = null;
         this.reqFrame = null;
-        this.componentsByClass = new Map();
+        this.componentsByClass = {
+            nonGlobal: new Map(),
+            global: new Map()
+        };
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
     }
@@ -188,12 +192,31 @@ class RenderLoop {
         }
     }
 
-    registerGlobalComponent(cmp: GlobalComponent) {
-        let cmpClass = cmp.constructor;
-        if (!this.componentsByClass.has(cmpClass)) {
-            this.componentsByClass.set(cmpClass, []);
+    registerComponent(cmp: Component) {
+        let map = null;
+        if (cmp instanceof GlobalComponent) {
+            map = this.componentsByClass.global;
+        } else {
+            map = this.componentsByClass.nonGlobal;
         }
-        this.componentsByClass.get(cmpClass)?.push(cmp);
+        let cmpClass = cmp.constructor;
+        if (!map.has(cmpClass)) {
+            map.set(cmpClass, []);
+        }
+        map.get(cmpClass)?.push(cmp);
+    }
+
+    * components() {
+        for (let [cmpClass, components] of this.componentsByClass.global) {
+            for (let component of components) {
+                yield component;
+            }
+        }
+        for (let [cmpClass, components] of this.componentsByClass.nonGlobal) {
+            for (let component of components) {
+                yield component;
+            }
+        }
     }
 
     execLoop() {
@@ -219,7 +242,7 @@ class RenderLoop {
         this.root.update(RenderStep.Move, ctx);
 
         // 2. collide
-        for (let [cmpClass, components] of this.componentsByClass) {
+        for (let [cmpClass, components] of this.componentsByClass.global) {
             (<any>cmpClass).globalUpdate(RenderStep.Collide, ctx, components);
         }
         this.root.update(RenderStep.Collide, ctx);

@@ -4,6 +4,7 @@ import * as Altgn from './lib/altng.js';
 import * as Engine from './lib/engine.js';
 import * as Physics from './lib/physics.js';
 import * as Maths from './lib/maths.js';
+import * as Basics from './lib/basics.js';
 
 
 function getExpectedElement(id: string) {
@@ -53,7 +54,7 @@ class FallingBouncing extends Engine.Component {
 
     override draw(ctx: Engine.FrameContext) {
         let collCmp = this.getComponent<Physics.CollidingComponent>(Physics.CollidingComponent);
-        let svgCmp = this.getComponent<Altgn.SvgCircleComponent>(Altgn.SvgCircleComponent);
+        let svgCmp = this.getComponent<Basics.SvgCircleComponent>(Basics.SvgCircleComponent);
         if (collCmp.collisions.length > 0) {
             svgCmp.svgEl.style = { fill: "#2F2" };
         } else {
@@ -65,18 +66,18 @@ class FallingBouncing extends Engine.Component {
 
 // Entities
 
-class Ball extends Altgn.Circle {
-    constructor(frame: Altgn.SvgFrame, ent: Engine.Entity, radius: number, mass: number) {
-        super(ent, frame, radius, { fill: "#8AF" });
+class Ball extends Basics.Circle {
+    constructor(ent: Engine.Entity, radius: number, mass: number) {
+        super(ent, radius, { fill: "#8AF" });
         let collider = new Physics.DiscColliderComponent(this, radius);
         this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
         this.registerComponent(new FallingBouncing(this, radius));
     }
 }
 
-class Floor extends Altgn.Rect {
-    constructor(frame: Altgn.SvgFrame, ent: Engine.Entity) {
-        super(ent, frame, 20, .1, { fill: "#8AF" });
+class Floor extends Basics.Rect {
+    constructor(ent: Engine.Entity) {
+        super(ent, 20, .1, { fill: "#8AF" });
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         cmp.pos.y = -5.05;
     }
@@ -85,70 +86,58 @@ class Floor extends Altgn.Rect {
 
 // Scenes
 
-function setupSceneA() {
-    let el = getExpectedElement("frame");
-    const frame = new Altgn.SvgFrame(el);
-    window.onresize = () => {
-        frame.resize();
-    }
-
-    const loop = new Engine.RenderLoop();
-    loop.start();
-
-    new Floor(frame, loop.root);
-
-    el.onclick = (event: MouseEvent) => {
-        if (event.button == 0) {
-            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            if (frame.safeView.contains(worldPos)) {
-                let p;
-                if (event.ctrlKey) {
-                    p = new Ball(frame, loop.root, .4, .4 * .4);
-                } else {
-                    p = new Ball(frame, loop.root, .2, .2 * .2);
-                }
-                let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-                cmp.pos = worldPos;
-            }
-        }
-    };
+let el = getExpectedElement("frame");
+const frame = new Altgn.SvgFrame(el);
+window.onresize = () => {
+    frame.resize();
 }
 
-function setupSceneB() {
-    let el = getExpectedElement("frame");
-    const frame = new Altgn.SvgFrame(el);
-    window.onresize = () => {
-        frame.resize();
+class SceneA extends Altgn.Scene {
+    constructor() {
+        super();
+        new Floor(this.root);
     }
-
-    const loop = new Engine.RenderLoop();
-    loop.start();
-
-    new Floor(frame, loop.root);
-    for (let i = -9; i <= 9; i += .5) {
-        let p = new Ball(frame, loop.root, .2, .2 * .2);
-        let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-        cmp.pos.x = i;
-        cmp.pos.y = Math.abs(i);
-    }
-
-    el.onclick = (event: MouseEvent) => {
-        if (event.button == 0) {
-            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            if (frame.safeView.contains(worldPos)) {
-                let p;
-                if (event.ctrlKey) {
-                    p = new Ball(frame, loop.root, .4, .4 * .4);
-                } else {
-                    p = new Ball(frame, loop.root, .2, .2 * .2);
-                }
-                let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-                cmp.pos = worldPos;
-            }
-        }
-    };
 }
 
-getExpectedElement("btn-scene-a").onclick = setupSceneA;
-getExpectedElement("btn-scene-b").onclick = setupSceneB;
-setupSceneA();
+class SceneB extends Altgn.Scene {
+    constructor() {
+        super();
+        new Floor(this.root);
+
+        for (let i = -9; i <= 9; i += .5) {
+            let p = new Ball(this.root, .2, .2 * .2);
+            let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+            cmp.pos.x = i;
+            cmp.pos.y = Math.abs(i);
+        }
+    }
+}
+
+let sceneA = new SceneA();
+let sceneB = new SceneB();
+
+getExpectedElement("btn-scene-a").onclick = () => {
+    frame.showScene(sceneA);
+};
+getExpectedElement("btn-scene-b").onclick = () => {
+    frame.showScene(sceneB);
+};
+
+frame.showScene(sceneA);
+
+
+el.onclick = (event: MouseEvent) => {
+    if (event.button == 0 && frame.scene) {
+        let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+        if (frame.safeView.contains(worldPos)) {
+            let p;
+            if (event.ctrlKey) {
+                p = new Ball(frame.scene.root, .4, .4 * .4);
+            } else {
+                p = new Ball(frame.scene.root, .2, .2 * .2);
+            }
+            let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+            cmp.pos = worldPos;
+        }
+    }
+};
