@@ -19,10 +19,14 @@ function getExpectedElement(id: string) {
 
 class FallingBouncing extends Engine.Component {
     readonly radius: number;
+    collidingFill: string;
+    noCollidingFill: string;
 
-    constructor(obj: Engine.Entity, radius: number) {
+    constructor(obj: Engine.Entity, radius: number, noCollidingFill: string, collidingFill: string) {
         super(obj);
         this.radius = radius;
+        this.collidingFill = collidingFill;
+        this.noCollidingFill = noCollidingFill;
         this.getComponent<Physics.MovingComponent>(Physics.MovingComponent).acc.y = -9.81;
     }
 
@@ -56,9 +60,9 @@ class FallingBouncing extends Engine.Component {
         let collCmp = this.getComponent<Physics.CollidingComponent>(Physics.CollidingComponent);
         let svgCmp = this.getComponent<Basics.SvgCircleComponent>(Basics.SvgCircleComponent);
         if (collCmp.collisions.length > 0) {
-            svgCmp.svgEl.style = { fill: "#2F2" };
+            svgCmp.svgEl.style = { fill: this.collidingFill };
         } else {
-            svgCmp.svgEl.style = { fill: "#8AF" };
+            svgCmp.svgEl.style = { fill: this.noCollidingFill };
         }
     }
 }
@@ -71,7 +75,16 @@ class Ball extends Basics.Circle {
         super(ent, radius, { fill: "#8AF" });
         let collider = new Physics.DiscColliderComponent(this, radius);
         this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
-        this.registerComponent(new FallingBouncing(this, radius));
+        this.registerComponent(new FallingBouncing(this, radius, "#8AF", "#0F0"));
+    }
+}
+
+class BallB extends Basics.Circle {
+    constructor(ent: Engine.Entity, radius: number, mass: number) {
+        super(ent, radius, { fill: "#A8F" });
+        let collider = new Physics.DiscColliderComponent(this, radius);
+        this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
+        this.registerComponent(new FallingBouncing(this, radius, "#A8F", "#0F0"));
     }
 }
 
@@ -99,11 +112,9 @@ class SceneA extends Altgn.Scene {
     }
 }
 
-class SceneB extends Altgn.Scene {
+class SceneB extends SceneA {
     constructor() {
         super();
-        new Floor(this.root);
-
         for (let i = -9; i <= 9; i += .5) {
             let p = new Ball(this.root, .2, .2 * .2);
             let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
@@ -113,29 +124,39 @@ class SceneB extends Altgn.Scene {
     }
 }
 
-let sceneA = new SceneA();
-let sceneB = new SceneB();
+class SceneC extends SceneA {
+    constructor() {
+        super();
+        for (let j = 0; j < 3; j++) {
+            for (let i = -9; i <= 9; i += .5) {
+                let p = new Ball(this.root, .2, .2 * .2);
+                let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+                cmp.pos.x = i;
+                cmp.pos.y = Math.abs(i) + j;
+            }
+        }
+    }
+}
 
 getExpectedElement("btn-scene-a").onclick = () => {
-    frame.showScene(sceneA);
+    frame.showScene(new SceneA());
 };
 getExpectedElement("btn-scene-b").onclick = () => {
-    frame.showScene(sceneB);
+    frame.showScene(new SceneB());
+};
+getExpectedElement("btn-scene-c").onclick = () => {
+    frame.showScene(new SceneC());
 };
 
-frame.showScene(sceneA);
+frame.showScene(new SceneA());
 
 
 el.onclick = (event: MouseEvent) => {
     if (event.button == 0 && frame.scene) {
         let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
         if (frame.safeView.contains(worldPos)) {
-            let p;
-            if (event.ctrlKey) {
-                p = new Ball(frame.scene.root, .4, .4 * .4);
-            } else {
-                p = new Ball(frame.scene.root, .2, .2 * .2);
-            }
+            let r = event.ctrlKey ? .4 : .2;
+            let p = new BallB(frame.scene.root, r, r * r);
             let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
             cmp.pos = worldPos;
         }

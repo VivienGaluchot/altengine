@@ -193,7 +193,7 @@ class CollidingComponent extends Engine.GlobalComponent {
 
         // TODO
         // - take discrete frame computation into account (compute exact contact point / back in time ?)
-
+        // - infinite (static) mass collider
         for (let col of this.collisions) {
             // speed correction
             let massRatio = (2 * col.other.cmp.mass) / (this.mass + col.other.cmp.mass);

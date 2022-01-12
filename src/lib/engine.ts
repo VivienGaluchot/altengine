@@ -1,5 +1,99 @@
 "use strict"
 
+// private
+
+interface ClassifierTypeNode {
+    children: Set<Function>;
+    instances: Array<any>
+};
+
+class Classifier {
+    readonly rootType: Function;
+    readonly rootTypeNode: ClassifierTypeNode;
+    readonly nodeByType: Map<Function, ClassifierTypeNode>;
+
+    constructor(rootType: Function) {
+        this.rootType = rootType;
+        this.rootTypeNode = { children: new Set(), instances: [] };
+        this.nodeByType = new Map();
+        this.nodeByType.set(rootType, this.rootTypeNode);
+    }
+
+    static * objClassParents(object: any, upToClass: Function) {
+        if (object instanceof upToClass) {
+            let from = Object.getPrototypeOf(object).constructor;
+            for (let cls of this.classParents(from, upToClass)) {
+                yield cls;
+            }
+        }
+    }
+
+    static * classParents(fromClass: Function, upToClass: Function) {
+        let cls = fromClass;
+        yield cls;
+        while (cls && cls != upToClass) {
+            cls = Object.getPrototypeOf(cls);
+            yield cls;
+        }
+        if (cls == null) {
+            console.error("classParents error", fromClass, upToClass);
+        }
+    }
+
+    add(obj: any) {
+        // enrich node tree
+        let prevCls = null;
+        for (let cls of Classifier.objClassParents(obj, this.rootType)) {
+            if (!this.nodeByType.has(cls)) {
+                this.nodeByType.set(cls, { children: new Set(), instances: [] });
+            }
+            let node = <ClassifierTypeNode>this.nodeByType.get(cls);
+            if (prevCls) {
+                node.children.add(prevCls);
+            }
+            prevCls = cls;
+        }
+
+        // add the actual instance in the obj type node
+        this.nodeByType.get(obj.constructor)?.instances.push(obj);
+    }
+
+    * getAllInstances(classType: Function): any {
+        let rootNode = this.nodeByType.get(classType);
+        if (rootNode) {
+            for (let obj of rootNode.instances) {
+                yield obj;
+            }
+            for (let cls of rootNode.children) {
+                for (let obj of this.getAllInstances(cls)) {
+                    yield obj;
+                }
+            }
+        }
+    }
+
+    * getExactInstances(classType: Function): any {
+        let rootNode = this.nodeByType.get(classType);
+        if (rootNode) {
+            for (let obj of rootNode.instances) {
+                yield obj;
+            }
+        }
+    }
+
+    * getAllChildClass(classType: Function): any {
+        let rootNode = this.nodeByType.get(classType);
+        if (rootNode) {
+            for (let cls of rootNode.children) {
+                yield cls;
+                for (let subCls of this.getAllChildClass(cls)) {
+                    yield subCls;
+                }
+            }
+        }
+    }
+}
+
 
 // Public
 
@@ -79,6 +173,7 @@ class GlobalComponent extends Component {
 class Entity {
     loop: RenderLoop;
     parentEnt: Entity | null;
+    // TODO use Classifier
     components: Array<Component>;
     componentsByClass: Map<Function, Component>;
     children: Set<Entity>;
@@ -161,18 +256,12 @@ class RenderLoop {
     readonly root: Entity;
     lastLoopTime: number | null;
     reqFrame: number | null;
-    componentsByClass: {
-        nonGlobal: Map<Function, Array<GlobalComponent>>,
-        global: Map<Function, Array<GlobalComponent>>
-    };
+    components: Classifier;
 
     constructor() {
         this.lastLoopTime = null;
         this.reqFrame = null;
-        this.componentsByClass = {
-            nonGlobal: new Map(),
-            global: new Map()
-        };
+        this.components = new Classifier(Component);
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
     }
@@ -193,30 +282,7 @@ class RenderLoop {
     }
 
     registerComponent(cmp: Component) {
-        let map = null;
-        if (cmp instanceof GlobalComponent) {
-            map = this.componentsByClass.global;
-        } else {
-            map = this.componentsByClass.nonGlobal;
-        }
-        let cmpClass = cmp.constructor;
-        if (!map.has(cmpClass)) {
-            map.set(cmpClass, []);
-        }
-        map.get(cmpClass)?.push(cmp);
-    }
-
-    * components() {
-        for (let [cmpClass, components] of this.componentsByClass.global) {
-            for (let component of components) {
-                yield component;
-            }
-        }
-        for (let [cmpClass, components] of this.componentsByClass.nonGlobal) {
-            for (let component of components) {
-                yield component;
-            }
-        }
+        this.components.add(cmp);
     }
 
     execLoop() {
@@ -242,8 +308,12 @@ class RenderLoop {
         this.root.update(RenderStep.Move, ctx);
 
         // 2. collide
-        for (let [cmpClass, components] of this.componentsByClass.global) {
-            (<any>cmpClass).globalUpdate(RenderStep.Collide, ctx, components);
+        for (let cls of this.components.getAllChildClass(GlobalComponent)) {
+            let components = [];
+            for (let obj of this.components.getAllInstances(cls)) {
+                components.push(obj);
+            }
+            (<any>cls).globalUpdate(RenderStep.Collide, ctx, components);
         }
         this.root.update(RenderStep.Collide, ctx);
 
