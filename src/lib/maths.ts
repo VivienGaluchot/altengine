@@ -1,7 +1,5 @@
 "use strict"
 
-import { createPrinter } from "../../node_modules/typescript/lib/typescript";
-
 
 // Public
 
@@ -10,6 +8,13 @@ class Vector {
     y: number;
 
     constructor(x: number, y: number) {
+        checkIsFinite(x);
+        checkIsFinite(y);
+        this.x = x;
+        this.y = y;
+    }
+
+    set(x: number, y: number) {
         checkIsFinite(x);
         checkIsFinite(y);
         this.x = x;
@@ -73,7 +78,39 @@ class Vector {
     dotProduct(v: Vector) {
         return this.x * v.x + this.y * v.y;
     }
+
+    crossProduct(v: Vector) {
+        return this.x * v.y - this.y * v.x;
+    }
+
+    angleWith(v: Vector) {
+        let x = Math.atan2(this.crossProduct(v), this.dotProduct(v));
+        checkIsFinite(x);
+        return x;
+    }
+
+    rotateInPlace(a: number) {
+        let c = Math.cos(a);
+        let s = Math.sin(a);
+        let x2 = c * this.x - s * this.y;
+        let y2 = s * this.x + c * this.y;
+        this.set(x2, y2);
+        return this;
+    }
+
+    rotate(a: number) {
+        return this.clone().rotateInPlace(a);
+    }
 }
+
+let x = new Vector(1, 0);
+let y = new Vector(0, 1);
+let z = new Vector(0, -1);
+console.log(x, y, z);
+console.log(x.norm(), y.norm(), z.norm());
+console.log(x.angleWith(y), x.angleWith(z));
+console.log(x.dotProduct(y), x.dotProduct(z));
+console.log(x.crossProduct(y), x.crossProduct(z));
 
 class Rect {
     pos: Vector;

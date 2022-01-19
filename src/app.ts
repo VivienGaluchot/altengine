@@ -17,52 +17,90 @@ function getExpectedElement(id: string) {
 
 // Components
 
-class FallingBouncing extends Engine.Component {
+class ConstrainedFloor extends Engine.Component {
     readonly radius: number;
-    collidingFill: string;
-    noCollidingFill: string;
+    readonly mCmp: Physics.MovingComponent;
+    readonly ranges: Maths.Rect;
 
-    constructor(obj: Engine.Entity, radius: number, noCollidingFill: string, collidingFill: string) {
+    constructor(obj: Engine.Entity, radius: number, ranges: Maths.Rect) {
         super(obj);
         this.radius = radius;
-        this.collidingFill = collidingFill;
-        this.noCollidingFill = noCollidingFill;
-        this.getComponent<Physics.MovingComponent>(Physics.MovingComponent).acc.y = -9.81;
+        this.ranges = ranges;
+        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
     }
 
     override move(ctx: Engine.FrameContext) {
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         // walls and floor
-        if (cmp.pos.x > (10 - this.radius)) {
-            cmp.pos.x = (10 - this.radius);
+        if (cmp.pos.x > (this.ranges.maxX() - this.radius)) {
+            cmp.pos.x = (this.ranges.maxX() - this.radius);
             if (cmp.speed.x > 0) {
-                // TODO prevent randomization at contact
                 cmp.speed.x = Math.min(0, cmp.prevSpeed.x * -1);
             }
         }
-        if (cmp.pos.x < (-10 + this.radius)) {
-            cmp.pos.x = (-10 + this.radius);
+        if (cmp.pos.x < (this.ranges.minX() + this.radius)) {
+            cmp.pos.x = (this.ranges.minX() + this.radius);
             if (cmp.speed.x < 0) {
-                // TODO prevent randomization at contact
                 cmp.speed.x = Math.max(0, cmp.prevSpeed.x * -1);
             }
         }
-        if (cmp.pos.y < (-5 + this.radius)) {
-            cmp.pos.y = (-5 + this.radius);
-            if (cmp.speed.y < 0 && cmp.prevSpeed.y < 0) {
-                // TODO prevent randomization at contact
+        if (cmp.pos.y < (this.ranges.minY() + this.radius)) {
+            cmp.pos.y = (this.ranges.minY() + this.radius);
+            if (cmp.speed.y < 0) {
                 cmp.speed.y = Math.max(0, cmp.prevSpeed.y * -1);
             }
         }
+        if (cmp.pos.y > (this.ranges.maxY() - this.radius)) {
+            cmp.pos.y = (this.ranges.maxY() - this.radius);
+            cmp.speed.y = 0;
+        }
+    }
+}
+
+class Falling extends Engine.Component {
+    constructor(obj: Engine.Entity) {
+        super(obj);
+        this.getComponent<Physics.MovingComponent>(Physics.MovingComponent).acc.y = -9.81;
+    }
+}
+
+class FallingToCenter extends Engine.Component {
+    readonly mCmp: Physics.MovingComponent;
+
+    constructor(obj: Engine.Entity) {
+        super(obj);
+        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+    }
+
+    override move(ctx: Engine.FrameContext) {
+        // TODO force management (to be executed before moving ?)
+        if (this.mCmp.pos.norm() > 0) {
+            this.mCmp.acc = this.mCmp.pos.normalize().scaleInPlace(-9.81);
+        } else {
+            this.mCmp.acc.set(0, 0);
+        }
+    }
+}
+
+class CollideBlink extends Engine.Component {
+    collidingFill: string;
+    noCollidingFill: string;
+    collCmp: Physics.CollidingComponent;
+    svgCmp: Basics.SvgCircleComponent;
+
+    constructor(obj: Engine.Entity, noCollidingFill: string, collidingFill: string) {
+        super(obj);
+        this.collidingFill = collidingFill;
+        this.noCollidingFill = noCollidingFill;
+        this.collCmp = this.getComponent<Physics.CollidingComponent>(Physics.CollidingComponent);
+        this.svgCmp = this.getComponent<Basics.SvgCircleComponent>(Basics.SvgCircleComponent);
     }
 
     override draw(ctx: Engine.FrameContext) {
-        let collCmp = this.getComponent<Physics.CollidingComponent>(Physics.CollidingComponent);
-        let svgCmp = this.getComponent<Basics.SvgCircleComponent>(Basics.SvgCircleComponent);
-        if (collCmp.collisions.length > 0) {
-            svgCmp.svgEl.style = { fill: this.collidingFill };
+        if (this.collCmp.collisions.length > 0) {
+            this.svgCmp.svgEl.style = { fill: this.collidingFill };
         } else {
-            svgCmp.svgEl.style = { fill: this.noCollidingFill };
+            this.svgCmp.svgEl.style = { fill: this.noCollidingFill };
         }
     }
 }
@@ -71,20 +109,34 @@ class FallingBouncing extends Engine.Component {
 // Entities
 
 class Ball extends Basics.Circle {
-    constructor(ent: Engine.Entity, radius: number, mass: number) {
+    constructor(ent: Engine.Entity, radius: number, mass: number, isFallingToCenter: boolean) {
         super(ent, radius, { fill: "#8AF" });
         let collider = new Physics.DiscColliderComponent(this, radius);
         this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
-        this.registerComponent(new FallingBouncing(this, radius, "#8AF", "#0F0"));
+        if (isFallingToCenter) {
+            this.registerComponent(new FallingToCenter(this));
+            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
+        } else {
+            this.registerComponent(new Falling(this));
+            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
+        }
+        this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
 
 class BallB extends Basics.Circle {
-    constructor(ent: Engine.Entity, radius: number, mass: number) {
+    constructor(ent: Engine.Entity, radius: number, mass: number, isFallingToCenter: boolean) {
         super(ent, radius, { fill: "#A8F" });
         let collider = new Physics.DiscColliderComponent(this, radius);
         this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
-        this.registerComponent(new FallingBouncing(this, radius, "#A8F", "#0F0"));
+        if (isFallingToCenter) {
+            this.registerComponent(new FallingToCenter(this));
+            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
+        } else {
+            this.registerComponent(new Falling(this));
+            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
+        }
+        this.registerComponent(new CollideBlink(this, "#A8F", "#0F0"));
     }
 }
 
@@ -116,7 +168,7 @@ class SceneB extends SceneA {
     constructor() {
         super();
         for (let i = -9; i <= 9; i += .5) {
-            let p = new Ball(this.root, .2, .2 * .2);
+            let p = new Ball(this.root, .2, .2 * .2, false);
             let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
             cmp.pos.x = i;
             cmp.pos.y = Math.abs(i);
@@ -129,12 +181,18 @@ class SceneC extends SceneA {
         super();
         for (let j = 0; j < 3; j++) {
             for (let i = -9; i <= 9; i += .5) {
-                let p = new Ball(this.root, .2, .2 * .2);
+                let p = new Ball(this.root, .2, .2 * .2, false);
                 let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
                 cmp.pos.x = i;
                 cmp.pos.y = Math.abs(i) + j;
             }
         }
+    }
+}
+
+class SceneD extends Altgn.Scene {
+    constructor() {
+        super();
     }
 }
 
@@ -147,6 +205,9 @@ getExpectedElement("btn-scene-b").onclick = () => {
 getExpectedElement("btn-scene-c").onclick = () => {
     frame.showScene(new SceneC());
 };
+getExpectedElement("btn-scene-d").onclick = () => {
+    frame.showScene(new SceneD());
+};
 
 frame.showScene(new SceneA());
 
@@ -156,7 +217,7 @@ el.onclick = (event: MouseEvent) => {
         let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
         if (frame.safeView.contains(worldPos)) {
             let r = event.ctrlKey ? .4 : .2;
-            let p = new BallB(frame.scene.root, r, r * r);
+            let p = new BallB(frame.scene.root, r, r * r, frame.scene.constructor == SceneD);
             let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
             cmp.pos = worldPos;
         }
