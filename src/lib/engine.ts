@@ -7,6 +7,31 @@ interface ClassifierTypeNode {
     instances: Array<any>
 };
 
+function getClassAncestorsChildToParent(fromClass: Function, upToClass: Function): Array<Function> {
+    let ancestors = [];
+    let cls = fromClass;
+    ancestors.push(cls);
+    while (cls && cls != upToClass) {
+        cls = Object.getPrototypeOf(cls);
+        ancestors.push(cls);
+    }
+    if (cls != upToClass) {
+        console.error(fromClass, "is not a descendent from", upToClass);
+        throw new Error(`${fromClass.name} is not a descendent from ${upToClass.name}`);
+    }
+    return ancestors;
+}
+
+function getObjectClassAncestorsChildToParent(object: any, upToClass: Function): Array<Function> {
+    if (object instanceof upToClass) {
+        let from = Object.getPrototypeOf(object).constructor;
+        return getClassAncestorsChildToParent(from, upToClass);
+    } else {
+        console.error(object, "object is not an instance of", upToClass);
+        throw new Error(`${object.constructor.name} object is not an instance of ${upToClass.name}`);
+    }
+}
+
 class Classifier {
     readonly rootType: Function;
     readonly rootTypeNode: ClassifierTypeNode;
@@ -22,28 +47,17 @@ class Classifier {
     static * objClassParents(object: any, upToClass: Function) {
         if (object instanceof upToClass) {
             let from = Object.getPrototypeOf(object).constructor;
-            for (let cls of this.classParents(from, upToClass)) {
-                yield cls;
-            }
-        }
-    }
-
-    static * classParents(fromClass: Function, upToClass: Function) {
-        let cls = fromClass;
-        yield cls;
-        while (cls && cls != upToClass) {
-            cls = Object.getPrototypeOf(cls);
-            yield cls;
-        }
-        if (cls == null) {
-            console.error("classParents error", fromClass, upToClass);
+            return getClassAncestorsChildToParent(from, upToClass);
+        } else {
+            console.error(object, "object is not an instance of", upToClass);
+            throw new Error(`${object.constructor.name} object is not an instance of ${upToClass.name}`);
         }
     }
 
     add(obj: any) {
         // enrich node tree
         let prevCls = null;
-        for (let cls of Classifier.objClassParents(obj, this.rootType)) {
+        for (let cls of getObjectClassAncestorsChildToParent(obj, this.rootType)) {
             if (!this.nodeByType.has(cls)) {
                 this.nodeByType.set(cls, { children: new Set(), instances: [] });
             }
@@ -97,12 +111,6 @@ class Classifier {
 
 // Public
 
-enum RenderStep {
-    Move,
-    Collide,
-    Draw
-}
-
 interface FrameContext {
     dt: number,
     dtInMs: number,
@@ -117,16 +125,6 @@ class Component {
 
     getComponent<Type extends Component>(cmpClass: Function): Type {
         return this.ent.getComponent(cmpClass);
-    }
-
-    update(step: RenderStep, ctx: FrameContext) {
-        if (step == RenderStep.Move) {
-            this.move(ctx);
-        } else if (step == RenderStep.Collide) {
-            this.collide(ctx);
-        } else if (step == RenderStep.Draw) {
-            this.draw(ctx);
-        }
     }
 
     move(ctx: FrameContext) {
@@ -147,25 +145,7 @@ class GlobalComponent extends Component {
         super(ent);
     }
 
-    static globalUpdate(step: RenderStep, ctx: FrameContext, components: Array<Component>) {
-        if (step == RenderStep.Move) {
-            this.globalMove(ctx, components);
-        } else if (step == RenderStep.Collide) {
-            this.globalCollide(ctx, components);
-        } else if (step == RenderStep.Draw) {
-            this.globalDraw(ctx, components);
-        }
-    }
-
-    static globalMove(ctx: FrameContext, components: Array<Component>) {
-        // to implement
-    }
-
     static globalCollide(ctx: FrameContext, components: Array<Component>) {
-        // to implement
-    }
-
-    static globalDraw(ctx: FrameContext, components: Array<Component>) {
         // to implement
     }
 }
@@ -219,12 +199,30 @@ class Entity {
         }
     }
 
-    update(step: RenderStep, ctx: FrameContext) {
+    move(ctx: FrameContext) {
         for (let cmp of this.components) {
-            cmp.update(step, ctx);
+            cmp.move(ctx);
         }
         for (let ent of this.children) {
-            ent.update(step, ctx);
+            ent.move(ctx);
+        }
+    }
+
+    collide(ctx: FrameContext) {
+        for (let cmp of this.components) {
+            cmp.collide(ctx);
+        }
+        for (let ent of this.children) {
+            ent.collide(ctx);
+        }
+    }
+
+    draw(ctx: FrameContext) {
+        for (let cmp of this.components) {
+            cmp.draw(ctx);
+        }
+        for (let ent of this.children) {
+            ent.draw(ctx);
         }
     }
 }
@@ -254,14 +252,18 @@ class FreqObserverComponent extends Component {
 
 class RenderLoop {
     readonly root: Entity;
+
     lastLoopTime: number | null;
     reqFrame: number | null;
     components: Classifier;
+    // Map callback -> Class Object
+    globalUpdates: Map<Function, Function>;
 
     constructor() {
         this.lastLoopTime = null;
         this.reqFrame = null;
         this.components = new Classifier(Component);
+        this.globalUpdates = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
     }
@@ -285,6 +287,26 @@ class RenderLoop {
         this.components.add(cmp);
     }
 
+    private globalCollide(ctx: FrameContext) {
+        // keep track of globalCollide functions already called
+        // prevent to call it multiple times when inherited but not overridden
+        let called = new Set<Function>();
+        for (let targetCls of this.components.getAllChildClass(GlobalComponent)) {
+            for (let cls of getClassAncestorsChildToParent(targetCls, GlobalComponent).reverse()) {
+                let cbk = (<any>cls).globalCollide;
+                if (!called.has(cbk)) {
+                    let components = [];
+                    for (let obj of this.components.getAllInstances(cls)) {
+                        components.push(obj);
+                    }
+                    console.log("run callback from ", cls.name, components.length);
+                    (<any>cls).globalCollide(ctx, components);
+                    called.add(cbk);
+                }
+            }
+        }
+    }
+
     execLoop() {
         let dtInMs = 0;
         let loopTime = Date.now();
@@ -305,23 +327,17 @@ class RenderLoop {
         // pass the step as arg
 
         // 1. move
-        this.root.update(RenderStep.Move, ctx);
+        this.root.move(ctx);
 
         // 2. collide
-        for (let cls of this.components.getAllChildClass(GlobalComponent)) {
-            let components = [];
-            for (let obj of this.components.getAllInstances(cls)) {
-                components.push(obj);
-            }
-            (<any>cls).globalUpdate(RenderStep.Collide, ctx, components);
-        }
-        this.root.update(RenderStep.Collide, ctx);
+        this.globalCollide(ctx);
+        this.root.collide(ctx);
 
         // 3. draw
-        this.root.update(RenderStep.Draw, ctx);
+        this.root.draw(ctx);
 
         this.lastLoopTime = loopTime;
     }
 }
 
-export { RenderStep, FrameContext, RenderLoop, Entity, Component, GlobalComponent }
+export { FrameContext, RenderLoop, Entity, Component, GlobalComponent }
