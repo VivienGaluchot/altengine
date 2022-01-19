@@ -299,7 +299,7 @@ class RenderLoop {
                     for (let obj of this.components.getAllInstances(cls)) {
                         components.push(obj);
                     }
-                    console.log("run callback from ", cls.name, components.length);
+                    // console.debug("run callback from ", cls.name, components.length);
                     (<any>cls).globalCollide(ctx, components);
                     called.add(cbk);
                 }

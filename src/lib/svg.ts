@@ -1,5 +1,7 @@
 "use strict"
 
+import * as Maths from './maths.js';
+
 
 // Private
 
@@ -91,18 +93,22 @@ class Line extends SvgTag {
     }
 
     set x1(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("x1", value.toString());
     }
 
     set y1(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("y1", value.toString());
     }
 
     set x2(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("x2", value.toString());
     }
 
     set y2(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("y2", value.toString());
     }
 }
@@ -118,18 +124,22 @@ class Rect extends SvgTag {
     }
 
     set x(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("x", value.toString());
     }
 
     set y(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("y", value.toString());
     }
 
     set w(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("width", value.toString());
     }
 
     set h(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("height", value.toString());
     }
 }
@@ -144,14 +154,17 @@ class Circle extends SvgTag {
     }
 
     set x(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("cx", value.toString());
     }
 
     set y(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("cy", value.toString());
     }
 
     set r(value: number) {
+        Maths.checkIsFinite(value);
         this.setAttribute("r", value.toString());
     }
 }

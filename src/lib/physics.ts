@@ -2,7 +2,6 @@
 
 import * as Maths from './maths.js';
 import * as Engine from './engine.js';
-import { Rect } from './svg.js';
 
 
 // Public
@@ -33,8 +32,8 @@ class MovingComponent extends Engine.Component {
         this.prevSpeed = this.speed.clone();
         this.prevAcc = this.acc.clone();
         this.prevDt = ctx.dt;
-        this.pos.addInPlace(this.speed.scale(ctx.dt));
         this.speed.addInPlace(this.acc.scale(ctx.dt));
+        this.pos.addInPlace(this.speed.scale(ctx.dt));
     }
 }
 
@@ -49,6 +48,7 @@ interface PosSpeed {
     speed: Maths.Vector;
 }
 
+// TODO check if everything is useful
 interface Collision {
     self: {
         before: PosSpeed;
@@ -109,7 +109,7 @@ class DiscColliderComponent extends ColliderComponent {
             let tPos = this.mCmp.pos;
             let oPos = other.mCmp.pos;
             let dist = tPos.dist(oPos);
-            if (dist < (this.radius + other.radius)) {
+            if (dist != 0 && dist < (this.radius + other.radius)) {
                 let contactNormal = oPos.subtract(tPos).normalizeInPlace();
                 let contactPoint = contactNormal.scale(this.radius).add(tPos);
                 return { contactPoint: contactPoint, contactNormal: contactNormal };

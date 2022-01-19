@@ -1,5 +1,7 @@
 "use strict"
 
+import { createPrinter } from "../../node_modules/typescript/lib/typescript";
+
 
 // Public
 
@@ -8,6 +10,8 @@ class Vector {
     y: number;
 
     constructor(x: number, y: number) {
+        checkIsFinite(x);
+        checkIsFinite(y);
         this.x = x;
         this.y = y;
     }
@@ -55,7 +59,9 @@ class Vector {
     }
 
     normalizeInPlace() {
-        return this.scaleInPlace(1 / this.norm());
+        let r = 1 / this.norm();
+        checkIsFinite(r);
+        return this.scaleInPlace(r);
     }
 
     dist(v: Vector) {
@@ -128,4 +134,10 @@ function swipe(x: number, a: number, b: number, va: number, vb: number): number 
     return v0 + r * x;
 }
 
-export { Vector, Rect, swipe }
+function checkIsFinite(n: number) {
+    if (!Number.isFinite(n)) {
+        throw new Error("invalid number");
+    }
+}
+
+export { Vector, Rect, swipe, checkIsFinite }

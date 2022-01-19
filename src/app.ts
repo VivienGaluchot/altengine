@@ -36,22 +36,22 @@ class FallingBouncing extends Engine.Component {
         if (cmp.pos.x > (10 - this.radius)) {
             cmp.pos.x = (10 - this.radius);
             if (cmp.speed.x > 0) {
-                // TODO prevent energy gain when -1
-                cmp.speed.x *= -.9;
+                // TODO prevent randomization at contact
+                cmp.speed.x = Math.min(0, cmp.prevSpeed.x * -1);
             }
         }
         if (cmp.pos.x < (-10 + this.radius)) {
             cmp.pos.x = (-10 + this.radius);
             if (cmp.speed.x < 0) {
-                // TODO prevent energy gain when -1
-                cmp.speed.x *= -.9;
+                // TODO prevent randomization at contact
+                cmp.speed.x = Math.max(0, cmp.prevSpeed.x * -1);
             }
         }
         if (cmp.pos.y < (-5 + this.radius)) {
             cmp.pos.y = (-5 + this.radius);
-            if (cmp.speed.y < 0) {
-                // TODO prevent energy gain when -1
-                cmp.speed.y *= -.9;
+            if (cmp.speed.y < 0 && cmp.prevSpeed.y < 0) {
+                // TODO prevent randomization at contact
+                cmp.speed.y = Math.max(0, cmp.prevSpeed.y * -1);
             }
         }
     }
