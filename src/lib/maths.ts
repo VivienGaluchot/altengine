@@ -103,15 +103,6 @@ class Vector {
     }
 }
 
-let x = new Vector(1, 0);
-let y = new Vector(0, 1);
-let z = new Vector(0, -1);
-console.log(x, y, z);
-console.log(x.norm(), y.norm(), z.norm());
-console.log(x.angleWith(y), x.angleWith(z));
-console.log(x.dotProduct(y), x.dotProduct(z));
-console.log(x.crossProduct(y), x.crossProduct(z));
-
 class Rect {
     pos: Vector;
     size: Vector;

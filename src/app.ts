@@ -35,19 +35,19 @@ class ConstrainedFloor extends Engine.Component {
         if (cmp.pos.x > (this.ranges.maxX() - this.radius)) {
             cmp.pos.x = (this.ranges.maxX() - this.radius);
             if (cmp.speed.x > 0) {
-                cmp.speed.x = Math.min(0, cmp.prevSpeed.x * -1);
+                cmp.speed.x = Math.min(0, cmp.prevSpeed.x * -.9);
             }
         }
         if (cmp.pos.x < (this.ranges.minX() + this.radius)) {
             cmp.pos.x = (this.ranges.minX() + this.radius);
             if (cmp.speed.x < 0) {
-                cmp.speed.x = Math.max(0, cmp.prevSpeed.x * -1);
+                cmp.speed.x = Math.max(0, cmp.prevSpeed.x * -.9);
             }
         }
         if (cmp.pos.y < (this.ranges.minY() + this.radius)) {
             cmp.pos.y = (this.ranges.minY() + this.radius);
             if (cmp.speed.y < 0) {
-                cmp.speed.y = Math.max(0, cmp.prevSpeed.y * -1);
+                cmp.speed.y = Math.max(0, cmp.prevSpeed.y * -.9);
             }
         }
         if (cmp.pos.y > (this.ranges.maxY() - this.radius)) {
@@ -120,7 +120,7 @@ class Ball extends Basics.Circle {
             this.registerComponent(new Falling(this));
             this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
         }
-        this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
+        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
 
@@ -136,7 +136,7 @@ class BallB extends Basics.Circle {
             this.registerComponent(new Falling(this));
             this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
         }
-        this.registerComponent(new CollideBlink(this, "#A8F", "#0F0"));
+        // this.registerComponent(new CollideBlink(this, "#A8F", "#0F0"));
     }
 }
 

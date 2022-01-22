@@ -43,27 +43,10 @@ interface CollisionContact {
     contactPoint: Maths.Vector;
 }
 
-interface PosSpeed {
-    pos: Maths.Vector;
-    speed: Maths.Vector;
-}
-
-// TODO check if everything is useful
 interface Collision {
-    self: {
-        before: PosSpeed;
-        after: PosSpeed;
-        contactNormal: Maths.Vector;
-        contactPoint: Maths.Vector;
-    }
-    other: {
-        cmp: CollidingComponent;
-        before: PosSpeed;
-        after: PosSpeed;
-        contactNormal: Maths.Vector;
-        contactPoint: Maths.Vector;
-    }
-    timeSpan: number;
+    contactNormal: Maths.Vector;
+    contactPoint: Maths.Vector;
+    other: CollidingComponent;
 }
 
 abstract class ColliderComponent extends Engine.Component {
@@ -143,30 +126,8 @@ class CollidingComponent extends Engine.GlobalComponent {
 
     addCollision(other: CollidingComponent, selfContact: CollisionContact, otherContact: CollisionContact) {
         this.collisions.push({
-            self: {
-                before: {
-                    pos: this.mCmp.prevPos,
-                    speed: this.mCmp.prevSpeed
-                },
-                after: {
-                    pos: this.mCmp.pos.clone(),
-                    speed: this.mCmp.speed.clone()
-                },
-                ...selfContact
-            },
-            other: {
-                cmp: other,
-                before: {
-                    pos: other.mCmp.prevPos,
-                    speed: other.mCmp.prevSpeed
-                },
-                after: {
-                    pos: other.mCmp.pos.clone(),
-                    speed: other.mCmp.speed.clone()
-                },
-                ...otherContact
-            },
-            timeSpan: this.mCmp.prevDt
+            other: other,
+            ...selfContact
         });
     }
 
@@ -176,34 +137,42 @@ class CollidingComponent extends Engine.GlobalComponent {
         for (let i = 0; i < components.length; i++) {
             for (let j = i + 1; j < components.length; j++) {
                 if (components[i].collider.isMaybeColliding(components[j].collider)) {
-                    let first = components[i].collider.getContact(components[j].collider);
-                    let second = components[j].collider.getContact(components[i].collider);
-                    if (first && second) {
-                        components[i].addCollision(components[j], first, second);
-                        components[j].addCollision(components[i], second, first);
-                    }
+                    this.solveCollision(components[i], components[j]);
                 }
             }
         }
     }
 
-    override collide(ctx: Engine.FrameContext) {
+    static solveCollision(a: CollidingComponent, b: CollidingComponent) {
         // adjust pos / speed according to collisions
         // elastic collision from https://en.wikipedia.org/wiki/Elastic_collision
 
         // TODO
         // - take discrete frame computation into account (compute exact contact point / back in time ?)
         // - infinite (static) mass collider
-        for (let col of this.collisions) {
+
+        let contactA = a.collider.getContact(b.collider);
+        let contactB = b.collider.getContact(a.collider);
+        if (contactA && contactB) {
+            a.addCollision(b, contactA, contactB);
+            b.addCollision(a, contactB, contactA);
+
             // speed correction
-            let massRatio = (2 * col.other.cmp.mass) / (this.mass + col.other.cmp.mass);
-            let contactDeltaSpeed = col.self.after.speed.subtract(col.other.after.speed);
-            let speedRatio = massRatio * contactDeltaSpeed.dotProduct(col.self.contactNormal);
-            this.mCmp.speed.subtractInPlace(col.self.contactNormal.scale(speedRatio));
+            let massRatioA = (2 * b.mass) / (a.mass + b.mass);
+            let massRatioB = (2 * a.mass) / (b.mass + a.mass);
+            let deltaSpeed = a.mCmp.speed.subtract(b.mCmp.speed);
+
+            let speedRatioA = massRatioA * deltaSpeed.dotProduct(contactA.contactNormal);
+            a.mCmp.speed = a.mCmp.speed.subtract(contactA.contactNormal.scale(speedRatioA));
+
+            let speedRatioB = massRatioB * deltaSpeed.scale(-1).dotProduct(contactB.contactNormal);
+            b.mCmp.speed = b.mCmp.speed.subtract(contactB.contactNormal.scale(speedRatioB));
+
             // pos correction
-            // TODO take into account mass difference
-            let contactDeltaPos = col.self.contactPoint.subtract(col.other.contactPoint);
-            this.mCmp.pos.subtractInPlace(contactDeltaPos.scale(.5));
+            // TODO replace by a force ?
+            let deltaPos = contactA.contactPoint.subtract(contactB.contactPoint);
+            a.mCmp.pos.subtractInPlace(deltaPos.scale(.5));
+            b.mCmp.pos.subtractInPlace(deltaPos.scale(-.5));
         }
     }
 }
