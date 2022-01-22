@@ -59,7 +59,6 @@ abstract class ColliderComponent extends Engine.Component {
 
 }
 
-
 // TODO add other types of colliders
 class DiscColliderComponent extends ColliderComponent {
     readonly mCmp: MovingComponent;
@@ -87,6 +86,7 @@ class DiscColliderComponent extends ColliderComponent {
         }
     }
 
+    // called in globalCollide state by colliding component
     override getContact(other: ColliderComponent): CollisionContact | null {
         if (other instanceof DiscColliderComponent) {
             let tPos = this.mCmp.pos;
@@ -106,25 +106,29 @@ class DiscColliderComponent extends ColliderComponent {
     }
 }
 
-class CollidingComponent extends Engine.GlobalComponent {
-    readonly mass: number;
-    readonly collider: ColliderComponent;
+type CollidingMass = number | null;
+
+abstract class RootCollidingComponent extends Engine.GlobalComponent {
+    readonly mass: CollidingMass;
+    readonly rebound: number;
+    readonly mCol: ColliderComponent;
     readonly mCmp: MovingComponent;
     collisions: Array<Collision>;
 
-    constructor(ent: Engine.Entity, mass: number, collider: ColliderComponent) {
+    constructor(ent: Engine.Entity, mass: CollidingMass, rebound: number) {
         super(ent);
         this.mass = mass;
-        this.collider = collider;
-        this.collisions = [];
+        this.rebound = rebound;
+        this.mCol = this.getComponent<ColliderComponent>(ColliderComponent);
         this.mCmp = this.getComponent<MovingComponent>(MovingComponent);
+        this.collisions = [];
     }
 
     override move(ctx: Engine.FrameContext) {
         this.collisions = [];
     }
 
-    addCollision(other: CollidingComponent, selfContact: CollisionContact, otherContact: CollisionContact) {
+    addCollision(other: CollidingComponent, selfContact: CollisionContact) {
         this.collisions.push({
             other: other,
             ...selfContact
@@ -136,7 +140,7 @@ class CollidingComponent extends Engine.GlobalComponent {
         // https://en.wikipedia.org/wiki/Quadtree
         for (let i = 0; i < components.length; i++) {
             for (let j = i + 1; j < components.length; j++) {
-                if (components[i].collider.isMaybeColliding(components[j].collider)) {
+                if (components[i].mCol.isMaybeColliding(components[j].mCol)) {
                     this.solveCollision(components[i], components[j]);
                 }
             }
@@ -151,31 +155,63 @@ class CollidingComponent extends Engine.GlobalComponent {
         // - take discrete frame computation into account (compute exact contact point / back in time ?)
         // - infinite (static) mass collider
 
-        let contactA = a.collider.getContact(b.collider);
-        let contactB = b.collider.getContact(a.collider);
+        let contactA = a.mCol.getContact(b.mCol);
+        let contactB = b.mCol.getContact(a.mCol);
         if (contactA && contactB) {
-            a.addCollision(b, contactA, contactB);
-            b.addCollision(a, contactB, contactA);
+            a.addCollision(b, contactA);
+            b.addCollision(a, contactB);
 
             // speed correction
-            let massRatioA = (2 * b.mass) / (a.mass + b.mass);
-            let massRatioB = (2 * a.mass) / (b.mass + a.mass);
+            let rebound = a.rebound * b.rebound;
+            let massRatio = (massA: CollidingMass, massB: CollidingMass) => {
+                if (massA != null && massB != null) {
+                    return (1 + rebound) * massB / (massA + massB);
+                } else {
+                    return 1 + rebound;
+                }
+            }
             let deltaSpeed = a.mCmp.speed.subtract(b.mCmp.speed);
-
-            let speedRatioA = massRatioA * deltaSpeed.dotProduct(contactA.contactNormal);
-            a.mCmp.speed = a.mCmp.speed.subtract(contactA.contactNormal.scale(speedRatioA));
-
-            let speedRatioB = massRatioB * deltaSpeed.scale(-1).dotProduct(contactB.contactNormal);
-            b.mCmp.speed = b.mCmp.speed.subtract(contactB.contactNormal.scale(speedRatioB));
+            if (a.mass != null) {
+                let speedRatio = massRatio(a.mass, b.mass) * deltaSpeed.dotProduct(contactA.contactNormal);
+                a.mCmp.speed.subtractInPlace(contactA.contactNormal.scale(speedRatio));
+            }
+            deltaSpeed.scaleInPlace(-1);
+            if (b.mass != null) {
+                let speedRatio = massRatio(b.mass, a.mass) * deltaSpeed.dotProduct(contactB.contactNormal);
+                b.mCmp.speed.subtractInPlace(contactB.contactNormal.scale(speedRatio));
+            }
 
             // pos correction
             // TODO replace by a force ?
+            let posRatio = (massA: CollidingMass, massB: CollidingMass) => {
+                if (massA != null && massB != null) {
+                    return .5;
+                } else {
+                    return 1;
+                }
+            }
             let deltaPos = contactA.contactPoint.subtract(contactB.contactPoint);
-            a.mCmp.pos.subtractInPlace(deltaPos.scale(.5));
-            b.mCmp.pos.subtractInPlace(deltaPos.scale(-.5));
+            if (a.mass != null) {
+                a.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(a.mass, b.mass)));
+            }
+            deltaPos.scaleInPlace(-1);
+            if (b.mass != null) {
+                b.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(b.mass, a.mass)));
+            }
         }
     }
 }
 
+class CollidingComponent extends RootCollidingComponent {
+    constructor(ent: Engine.Entity, mass: number, rebound: number) {
+        super(ent, mass, rebound);
+    }
+}
 
-export { MovingComponent, CollidingComponent, DiscColliderComponent }
+class StaticCollidingComponent extends RootCollidingComponent {
+    constructor(ent: Engine.Entity, rebound: number) {
+        super(ent, null, rebound);
+    }
+}
+
+export { MovingComponent, CollidingComponent, StaticCollidingComponent, DiscColliderComponent }

@@ -106,6 +106,23 @@ class Classifier {
             }
         }
     }
+
+    getUniqueInstance(classType: Function): any {
+        let instance = null;
+        for (let obj of this.getAllInstances(classType)) {
+            if (instance == null) {
+                instance = obj;
+            } else {
+                console.error("multiple child class registered for", { class: classType, classifier: this });
+                throw new Error(`multiple child class registered for ${classType.name}`);
+            }
+        }
+        if (instance == null) {
+            console.error("no child class registered for", { class: classType, classifier: this });
+            throw new Error(`no child class registered for ${classType.name}`);
+        }
+        return instance;
+    }
 }
 
 
@@ -153,8 +170,8 @@ class GlobalComponent extends Component {
 class Entity {
     loop: RenderLoop;
     parentEnt: Entity | null;
-    // TODO use Classifier
     components: Array<Component>;
+    classifier: Classifier;
     componentsByClass: Map<Function, Component>;
     children: Set<Entity>;
 
@@ -167,6 +184,7 @@ class Entity {
             this.parentEnt = null;
         }
         this.components = [];
+        this.classifier = new Classifier(Component);
         this.componentsByClass = new Map();
         this.children = new Set();
         if (this.parentEnt) {
@@ -179,24 +197,19 @@ class Entity {
     }
 
     registerComponent(cmp: Component) {
-        this.loop.registerComponent(cmp);
         let cmpClass = cmp.constructor;
-        this.components.push(cmp);
         if (this.componentsByClass.has(cmpClass)) {
             throw new Error(`component already registered for class ${cmpClass}`);
         }
         this.componentsByClass.set(cmpClass, cmp);
+        this.loop.registerComponent(cmp);
+        this.classifier.add(cmp);
+        this.components.push(cmp);
     }
 
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
     getComponent<Type extends Component>(cmpClass: Function): Type {
-        let cmp = this.componentsByClass.get(cmpClass);
-        if (cmp) {
-            return <Type>cmp;
-        } else {
-            console.error("no component registered for class", { class: cmpClass, entity: this });
-            throw new Error(`no component registered for class ${cmpClass}`);
-        }
+        return <Type>this.classifier.getUniqueInstance(cmpClass);
     }
 
     move(ctx: FrameContext) {

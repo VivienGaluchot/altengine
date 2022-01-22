@@ -111,8 +111,8 @@ class CollideBlink extends Engine.Component {
 class Ball extends Basics.Circle {
     constructor(ent: Engine.Entity, radius: number, mass: number, isFallingToCenter: boolean) {
         super(ent, radius, { fill: "#8AF" });
-        let collider = new Physics.DiscColliderComponent(this, radius);
-        this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
+        this.registerComponent(new Physics.DiscColliderComponent(this, radius));
+        this.registerComponent(new Physics.CollidingComponent(this, mass, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
             this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
@@ -127,8 +127,8 @@ class Ball extends Basics.Circle {
 class BallB extends Basics.Circle {
     constructor(ent: Engine.Entity, radius: number, mass: number, isFallingToCenter: boolean) {
         super(ent, radius, { fill: "#A8F" });
-        let collider = new Physics.DiscColliderComponent(this, radius);
-        this.registerComponent(new Physics.CollidingComponent(this, mass, collider));
+        this.registerComponent(new Physics.DiscColliderComponent(this, radius));
+        this.registerComponent(new Physics.CollidingComponent(this, mass, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
             this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
@@ -137,6 +137,15 @@ class BallB extends Basics.Circle {
             this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
         }
         // this.registerComponent(new CollideBlink(this, "#A8F", "#0F0"));
+    }
+}
+
+class CenterFloor extends Basics.Circle {
+    constructor(ent: Engine.Entity, radius: number) {
+        super(ent, radius, { fill: "#8AF" });
+        this.registerComponent(new Physics.DiscColliderComponent(this, radius));
+        this.registerComponent(new Physics.StaticCollidingComponent(this, .9));
+        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
 
@@ -193,6 +202,7 @@ class SceneC extends SceneA {
 class SceneD extends Altgn.Scene {
     constructor() {
         super();
+        new CenterFloor(this.root, 2);
     }
 }
 
