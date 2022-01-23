@@ -1,5 +1,8 @@
 "use strict"
 
+import * as Maths from './maths.js';
+
+
 // private
 
 interface ClassifierTypeNode {
@@ -131,6 +134,8 @@ class Classifier {
 interface FrameContext {
     dt: number,
     dtInMs: number,
+    safeView: Maths.Rect,
+    fullView: Maths.Rect,
 }
 
 class Component {
@@ -169,7 +174,7 @@ class GlobalComponent extends Component {
 
 class Entity {
     loop: RenderLoop;
-    parentEnt: Entity | null;
+    parentEnt?: Entity;
     components: Array<Component>;
     classifier: Classifier;
     componentsByClass: Map<Function, Component>;
@@ -181,7 +186,6 @@ class Entity {
             this.parentEnt = parent;
         } else {
             this.loop = parent;
-            this.parentEnt = null;
         }
         this.components = [];
         this.classifier = new Classifier(Component);
@@ -263,26 +267,34 @@ class FreqObserverComponent extends Component {
     }
 }
 
-class RenderLoop {
+interface ViewProvider {
+    // safe area, always drawn for all aspect ratios
+    safeView: Maths.Rect;
+    // full area, actuel area drawn
+    fullView: Maths.Rect;
+}
+
+abstract class RenderLoop {
     readonly root: Entity;
 
-    lastLoopTime: number | null;
-    reqFrame: number | null;
+    lastLoopTime?: number;
+    reqFrame?: number;
     components: Classifier;
     // Map callback -> Class Object
     globalUpdates: Map<Function, Function>;
 
+    viewProvider?: ViewProvider;
+
     constructor() {
-        this.lastLoopTime = null;
-        this.reqFrame = null;
         this.components = new Classifier(Component);
         this.globalUpdates = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
     }
 
-    start() {
-        this.lastLoopTime = null;
+    start(viewProvider: ViewProvider) {
+        this.viewProvider = viewProvider;
+        this.lastLoopTime = undefined;
         let loop = () => {
             this.execLoop();
             this.reqFrame = window.requestAnimationFrame(loop);
@@ -330,9 +342,14 @@ class RenderLoop {
             console.warn(`render too slow, cap render period from ${dtInMs}ms to 100ms`);
             dtInMs = 100;
         }
-        const ctx = {
+        if (!this.viewProvider) {
+            throw new Error("view provider not defined");
+        }
+        const ctx: FrameContext = {
             dt: dtInMs / 1000,
-            dtInMs: dtInMs
+            dtInMs: dtInMs,
+            safeView: this.viewProvider.safeView.clone(),
+            fullView: this.viewProvider.fullView.clone(),
         };
 
         // TODO register the component at a specific render step

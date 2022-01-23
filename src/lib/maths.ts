@@ -21,6 +21,10 @@ class Vector {
         this.y = y;
     }
 
+    equal(other: Vector) {
+        return this.x == other.x && this.y == other.y;
+    }
+
     clone() {
         return new Vector(this.x, this.y);
     }
@@ -110,6 +114,10 @@ class Rect {
     constructor(pos: Vector, size: Vector) {
         this.pos = pos;
         this.size = size;
+    }
+
+    equal(other: Rect) {
+        return this.pos.equal(other.pos) && this.size.equal(other.size);
     }
 
     clone() {

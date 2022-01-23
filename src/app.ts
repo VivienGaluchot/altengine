@@ -109,10 +109,10 @@ class CollideBlink extends Engine.Component {
 // Entities
 
 class Ball extends Basics.Circle {
-    constructor(ent: Engine.Entity, radius: number, mass: number, isFallingToCenter: boolean) {
+    constructor(ent: Engine.Entity, radius: number, isFallingToCenter: boolean) {
         super(ent, radius, { fill: "#8AF" });
         this.registerComponent(new Physics.DiscColliderComponent(this, radius));
-        this.registerComponent(new Physics.CollidingComponent(this, mass, .9));
+        this.registerComponent(new Physics.CollidingComponent(this, radius * radius, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
             this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
@@ -124,25 +124,11 @@ class Ball extends Basics.Circle {
     }
 }
 
-class BallB extends Basics.Circle {
-    constructor(ent: Engine.Entity, radius: number, mass: number, isFallingToCenter: boolean) {
-        super(ent, radius, { fill: "#A8F" });
-        this.registerComponent(new Physics.DiscColliderComponent(this, radius));
-        this.registerComponent(new Physics.CollidingComponent(this, mass, .9));
-        if (isFallingToCenter) {
-            this.registerComponent(new FallingToCenter(this));
-            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
-        } else {
-            this.registerComponent(new Falling(this));
-            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
-        }
-        // this.registerComponent(new CollideBlink(this, "#A8F", "#0F0"));
-    }
-}
-
 class CenterFloor extends Basics.Circle {
+    static strokeW: number = .1;
+
     constructor(ent: Engine.Entity, radius: number) {
-        super(ent, radius, { fill: "#8AF" });
+        super(ent, radius - (CenterFloor.strokeW / 2), { fill: "transparent", stroke: "#8AF8", strokeW: CenterFloor.strokeW });
         this.registerComponent(new Physics.DiscColliderComponent(this, radius));
         this.registerComponent(new Physics.StaticCollidingComponent(this, .9));
         // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
@@ -151,11 +137,27 @@ class CenterFloor extends Basics.Circle {
 
 class Floor extends Basics.Rect {
     constructor(ent: Engine.Entity) {
-        super(ent, 20, .1, { fill: "#8AF" });
+        super(ent, 20, .1, { fill: "#8AF8" });
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         cmp.pos.y = -5.05;
     }
 }
+
+
+// Settings
+
+const checkboxGrid = getExpectedElement("checkbox-grid");
+
+function updateGridVisibility() {
+    let isShowed = (<any>checkboxGrid).checked;
+    if (frame.scene) {
+        let grid = frame.scene.root.getComponent<Basics.SvgGridComponent>(Basics.SvgGridComponent);
+        grid.setVisibility(isShowed);
+    }
+}
+checkboxGrid.onclick = () => {
+    updateGridVisibility();
+};
 
 
 // Scenes
@@ -170,14 +172,16 @@ class SceneA extends Altgn.Scene {
     constructor() {
         super();
         new Floor(this.root);
+        this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#012");
     }
 }
 
 class SceneB extends SceneA {
     constructor() {
         super();
+        this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#013");
         for (let i = -9; i <= 9; i += .5) {
-            let p = new Ball(this.root, .2, .2 * .2, false);
+            let p = new Ball(this.root, .2, false);
             let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
             cmp.pos.x = i;
             cmp.pos.y = Math.abs(i);
@@ -188,9 +192,10 @@ class SceneB extends SceneA {
 class SceneC extends SceneA {
     constructor() {
         super();
+        this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#022");
         for (let j = 0; j < 3; j++) {
             for (let i = -9; i <= 9; i += .5) {
-                let p = new Ball(this.root, .2, .2 * .2, false);
+                let p = new Ball(this.root, .2, false);
                 let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
                 cmp.pos.x = i;
                 cmp.pos.y = Math.abs(i) + j;
@@ -202,24 +207,30 @@ class SceneC extends SceneA {
 class SceneD extends Altgn.Scene {
     constructor() {
         super();
+        this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#112");
         new CenterFloor(this.root, 2);
     }
 }
 
 getExpectedElement("btn-scene-a").onclick = () => {
     frame.showScene(new SceneA());
+    updateGridVisibility();
 };
 getExpectedElement("btn-scene-b").onclick = () => {
     frame.showScene(new SceneB());
+    updateGridVisibility();
 };
 getExpectedElement("btn-scene-c").onclick = () => {
     frame.showScene(new SceneC());
+    updateGridVisibility();
 };
 getExpectedElement("btn-scene-d").onclick = () => {
     frame.showScene(new SceneD());
+    updateGridVisibility();
 };
 
 frame.showScene(new SceneA());
+updateGridVisibility();
 
 
 el.onclick = (event: MouseEvent) => {
@@ -227,7 +238,7 @@ el.onclick = (event: MouseEvent) => {
         let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
         if (frame.safeView.contains(worldPos)) {
             let r = event.ctrlKey ? .4 : .2;
-            let p = new BallB(frame.scene.root, r, r * r, frame.scene.constructor == SceneD);
+            let p = new Ball(frame.scene.root, r, frame.scene.constructor == SceneD);
             let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
             cmp.pos = worldPos;
         }

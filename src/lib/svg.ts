@@ -16,7 +16,7 @@ function setStyle(el: Element, style: SvgStyle) {
         el.setAttribute("stroke", style.stroke);
     }
     if (style.strokeW) {
-        el.setAttribute("stroke-width", style.strokeW);
+        el.setAttribute("stroke-width", `${style.strokeW}`);
     }
     if (style.vectorEffect) {
         el.setAttribute("vector-effect", style.vectorEffect);
@@ -30,7 +30,7 @@ interface SvgStyle {
     className?: string;
     fill?: string;
     stroke?: string;
-    strokeW?: string;
+    strokeW?: string | number;
     vectorEffect?: string;
 }
 
@@ -72,9 +72,8 @@ class SvgTag extends SvgNode {
 }
 
 class Group extends SvgTag {
-    constructor(id: string) {
+    constructor() {
         super("g");
-        this.id = id;
     }
 
     set id(value: string) {
