@@ -23,6 +23,7 @@ body {
     left: .5rem;
     color: rgba(255, 255, 255, 0.3);
     font-family: 'Courier New', Courier, monospace;
+    cursor: default;
 }
 
 .ctrl>div {
@@ -45,4 +46,9 @@ body {
 .ctrl button:active {
     border: 1px solid rgba(255, 255, 255, 0.4);
     color: rgba(255, 255, 255, 0.4);
+}
+
+.ctrl input[type=checkbox] {
+    cursor: pointer;
+    filter: hue-rotate(180deg) invert();
 }
