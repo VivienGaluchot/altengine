@@ -18,13 +18,15 @@ function getExpectedElement(id: string) {
 // Components
 
 class ConstrainedFloor extends Engine.Component {
-    readonly radius: number;
+    readonly w: number;
+    readonly h: number;
     readonly mCmp: Physics.MovingComponent;
     readonly ranges: Maths.Rect;
 
-    constructor(obj: Engine.Entity, radius: number, ranges: Maths.Rect) {
+    constructor(obj: Engine.Entity, w: number, h: number, ranges: Maths.Rect) {
         super(obj);
-        this.radius = radius;
+        this.w = w;
+        this.h = h;
         this.ranges = ranges;
         this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
     }
@@ -32,26 +34,26 @@ class ConstrainedFloor extends Engine.Component {
     override move(ctx: Engine.FrameContext) {
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
         // walls and floor
-        if (cmp.pos.x > (this.ranges.maxX() - this.radius)) {
-            cmp.pos.x = (this.ranges.maxX() - this.radius);
+        if (cmp.pos.x > (this.ranges.maxX() - this.w / 2)) {
+            cmp.pos.x = (this.ranges.maxX() - this.w / 2);
             if (cmp.speed.x > 0) {
                 cmp.speed.x = Math.min(0, cmp.prevSpeed.x * -.9);
             }
         }
-        if (cmp.pos.x < (this.ranges.minX() + this.radius)) {
-            cmp.pos.x = (this.ranges.minX() + this.radius);
+        if (cmp.pos.x < (this.ranges.minX() + this.w / 2)) {
+            cmp.pos.x = (this.ranges.minX() + this.w / 2);
             if (cmp.speed.x < 0) {
                 cmp.speed.x = Math.max(0, cmp.prevSpeed.x * -.9);
             }
         }
-        if (cmp.pos.y < (this.ranges.minY() + this.radius)) {
-            cmp.pos.y = (this.ranges.minY() + this.radius);
+        if (cmp.pos.y < (this.ranges.minY() + this.h / 2)) {
+            cmp.pos.y = (this.ranges.minY() + this.h / 2);
             if (cmp.speed.y < 0) {
                 cmp.speed.y = Math.max(0, cmp.prevSpeed.y * -.9);
             }
         }
-        if (cmp.pos.y > (this.ranges.maxY() - this.radius)) {
-            cmp.pos.y = (this.ranges.maxY() - this.radius);
+        if (cmp.pos.y > (this.ranges.maxY() - this.h / 2)) {
+            cmp.pos.y = (this.ranges.maxY() - this.h / 2);
             cmp.speed.y = 0;
         }
     }
@@ -85,15 +87,15 @@ class FallingToCenter extends Engine.Component {
 class CollideBlink extends Engine.Component {
     collidingFill: string;
     noCollidingFill: string;
-    collCmp: Physics.CollidingComponent;
-    svgCmp: Basics.SvgCircleComponent;
+    collCmp: Physics.RigidBody;
+    svgCmp: Basics.SvgComponent;
 
     constructor(obj: Engine.Entity, noCollidingFill: string, collidingFill: string) {
         super(obj);
         this.collidingFill = collidingFill;
         this.noCollidingFill = noCollidingFill;
-        this.collCmp = this.getComponent<Physics.CollidingComponent>(Physics.CollidingComponent);
-        this.svgCmp = this.getComponent<Basics.SvgCircleComponent>(Basics.SvgCircleComponent);
+        this.collCmp = this.getComponent<Physics.RigidBody>(Physics.RigidBody);
+        this.svgCmp = this.getComponent<Basics.SvgComponent>(Basics.SvgComponent);
     }
 
     override draw(ctx: Engine.FrameContext) {
@@ -111,16 +113,32 @@ class CollideBlink extends Engine.Component {
 class Ball extends Basics.Circle {
     constructor(ent: Engine.Entity, radius: number, isFallingToCenter: boolean) {
         super(ent, radius, { fill: "#8AF" });
-        this.registerComponent(new Physics.DiscColliderComponent(this, radius));
-        this.registerComponent(new Physics.CollidingComponent(this, radius * radius, .9));
+        this.registerComponent(new Physics.DiscCollider(this, radius));
+        this.registerComponent(new Physics.RigidBody(this, radius * radius, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
-            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
+            this.registerComponent(new ConstrainedFloor(this, radius * 2, radius * 2, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
         } else {
             this.registerComponent(new Falling(this));
-            this.registerComponent(new ConstrainedFloor(this, radius, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
+            this.registerComponent(new ConstrainedFloor(this, radius * 2, radius * 2, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
         }
         // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
+    }
+}
+
+class Bloc extends Basics.Rect {
+    constructor(ent: Engine.Entity, w: number, h: number, isFallingToCenter: boolean) {
+        super(ent, w, h, { fill: "#8AF" });
+        this.registerComponent(new Physics.BoxCollider(this, new Maths.Rect(new Maths.Vector(-w / 2, -h / 2), new Maths.Vector(w, h))));
+        this.registerComponent(new Physics.RigidBody(this, w * h, .9));
+        if (isFallingToCenter) {
+            this.registerComponent(new FallingToCenter(this));
+            this.registerComponent(new ConstrainedFloor(this, w, h, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
+        } else {
+            this.registerComponent(new Falling(this));
+            this.registerComponent(new ConstrainedFloor(this, w, h, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
+        }
+        this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
 
@@ -129,8 +147,8 @@ class CenterFloor extends Basics.Circle {
 
     constructor(ent: Engine.Entity, radius: number) {
         super(ent, radius - (CenterFloor.strokeW / 2), { fill: "transparent", stroke: "#8AF8", strokeW: CenterFloor.strokeW });
-        this.registerComponent(new Physics.DiscColliderComponent(this, radius));
-        this.registerComponent(new Physics.StaticCollidingComponent(this, .9));
+        this.registerComponent(new Physics.DiscCollider(this, radius));
+        this.registerComponent(new Physics.StaticRigidBody(this, .9));
         // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
@@ -236,11 +254,12 @@ updateGridVisibility();
 el.onclick = (event: MouseEvent) => {
     if (event.button == 0 && frame.scene) {
         let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-        if (frame.safeView.contains(worldPos)) {
-            let r = event.ctrlKey ? .4 : .2;
-            let p = new Ball(frame.scene.root, r, frame.scene.constructor == SceneD);
-            let cmp = p.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-            cmp.pos = worldPos;
+        let p;
+        if (!event.ctrlKey) {
+            p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
+        } else {
+            p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
         }
+        p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = worldPos;
     }
 };

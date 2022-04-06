@@ -123,6 +123,13 @@ class Rect {
         let interY = (this.minY() <= r.maxY()) && (r.minY() <= this.maxY());
         return interX && interY;
     }
+    intersection(r) {
+        let minX = Math.max(this.minX(), r.minX());
+        let minY = Math.max(this.minY(), r.minY());
+        let maxX = Math.min(this.maxX(), r.maxX());
+        let maxY = Math.min(this.maxY(), r.maxY());
+        return new Rect(new Vector(minX, minY), new Vector(maxX - minX, maxY - minY));
+    }
 }
 function swipe(x, a, b, va, vb) {
     let r = (vb - va) / (b - a);

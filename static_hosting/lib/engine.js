@@ -115,6 +115,9 @@ class Component {
     getComponent(cmpClass) {
         return this.ent.getComponent(cmpClass);
     }
+    *getComponents(cmpClass) {
+        return this.ent.getComponents(cmpClass);
+    }
     move(ctx) {
         // to implement
     }
@@ -167,6 +170,10 @@ class Entity {
     getComponent(cmpClass) {
         return this.classifier.getUniqueInstance(cmpClass);
     }
+    // TODO improve writing to don't need to specify the class in the generic and argument if possible
+    *getComponents(cmpClass) {
+        return this.classifier.getAllInstances(cmpClass);
+    }
     move(ctx) {
         for (let cmp of this.components) {
             cmp.move(ctx);
@@ -215,7 +222,7 @@ class RenderLoop {
         this.components = new Classifier(Component);
         this.globalUpdates = new Map();
         this.root = new Entity(this);
-        this.root.registerComponent(new FreqObserverComponent(this.root));
+        new FreqObserverComponent(this.root);
     }
     start(viewProvider) {
         this.viewProvider = viewProvider;

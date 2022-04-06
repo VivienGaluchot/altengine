@@ -18,7 +18,7 @@ class Scene extends Engine.RenderLoop {
 
     play(frame: SvgFrame) {
         this.frame = frame;
-        for (let cmp of this.components.getAllInstances(Basics.SvgComponent)) {
+        for (let cmp of this.components.getAllInstances<Basics.SvgComponent>(Basics.SvgComponent)) {
             this.showSvgComponent(cmp);
         }
         this.start(frame);
@@ -46,8 +46,8 @@ class Scene extends Engine.RenderLoop {
 
     pause() {
         this.stop();
-        for (let cmp of this.components.getAllInstances(Basics.SvgComponent)) {
-            (<Basics.SvgComponent>cmp).remove();
+        for (let cmp of this.components.getAllInstances<Basics.SvgComponent>(Basics.SvgComponent)) {
+            cmp.remove();
         }
     }
 }

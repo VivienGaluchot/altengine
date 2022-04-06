@@ -4,6 +4,72 @@ import * as Maths from './maths.js';
 import * as Engine from './engine.js';
 
 
+// Private
+
+interface CollisionContact {
+    contactNormal: Maths.Vector;
+    contactPoint: Maths.Vector;
+}
+
+interface Collision {
+    contactNormal: Maths.Vector;
+    contactPoint: Maths.Vector;
+    other: RigidBody;
+}
+
+// TODO remove, the order should impact the contact point
+// in order to correct colliding position
+function reverseCollisionContact(contact: CollisionContact | null): CollisionContact | null {
+    if (contact) {
+        return {
+            contactNormal: contact.contactNormal.scale(-1),
+            contactPoint: contact.contactPoint
+        };
+    } else {
+        return null;
+    }
+}
+
+function solveContactDiscDisc(a: DiscCollider, b: DiscCollider): CollisionContact | null {
+    let aPos = a.mCmp.pos;
+    let bPos = b.mCmp.pos;
+    let dist = aPos.dist(bPos);
+    if (dist != 0 && dist < (a.radius + b.radius)) {
+        let contactNormal = bPos.subtract(aPos).normalizeInPlace();
+        let contactPoint = contactNormal.scale(a.radius).add(aPos);
+        return { contactPoint: contactPoint, contactNormal: contactNormal };
+    } else {
+        return null;
+    }
+}
+
+function solveContactDiscBox(a: DiscCollider, b: BoxCollider): CollisionContact | null {
+    // TODO
+    return null;
+}
+
+function solveContactBoxBox(a: BoxCollider, b: BoxCollider): CollisionContact | null {
+    let aPos = a.mCmp.pos;
+    let bPos = b.mCmp.pos;
+    let inter = a.relBoundingBox.translate(aPos).intersection(b.relBoundingBox.translate(bPos));
+    let contactPoint = inter.center();
+    let contactNormal;
+    if (inter.size.y >= inter.size.x) {
+        if (aPos.x >= bPos.x)
+            contactNormal = new Maths.Vector(-1, 0);
+        else
+            contactNormal = new Maths.Vector(1, 0);
+    } else {
+        if (aPos.y >= bPos.y)
+            contactNormal = new Maths.Vector(0, -1);
+        else
+            contactNormal = new Maths.Vector(0, 1);
+    }
+    return { contactPoint: contactPoint, contactNormal: contactNormal };
+}
+
+
+
 // Public
 
 class MovingComponent extends Engine.Component {
@@ -37,68 +103,40 @@ class MovingComponent extends Engine.Component {
     }
 }
 
-
-interface CollisionContact {
-    contactNormal: Maths.Vector;
-    contactPoint: Maths.Vector;
-}
-
-interface Collision {
-    contactNormal: Maths.Vector;
-    contactPoint: Maths.Vector;
-    other: CollidingComponent;
-}
-
 abstract class ColliderComponent extends Engine.Component {
+    readonly mCmp: MovingComponent;
+    readonly relBoundingBox: Maths.Rect;
 
-    // called in globalCollide state by colliding component
-    abstract isMaybeColliding(other: ColliderComponent): boolean;
+    constructor(ent: Engine.Entity, relBoundingBox: Maths.Rect) {
+        super(ent);
+        this.relBoundingBox = relBoundingBox;
+        this.mCmp = this.getComponent<MovingComponent>(MovingComponent);
+    }
+
+    // called in globalCollide state
+    isMaybeColliding(other: ColliderComponent): boolean {
+        return this.relBoundingBox.translate(this.mCmp.pos).isIntersecting(other.relBoundingBox.translate(other.mCmp.pos));
+    }
 
     // called in globalCollide state by colliding component
     abstract getContact(other: ColliderComponent): CollisionContact | null;
 
 }
 
-// TODO add other types of colliders
-class DiscColliderComponent extends ColliderComponent {
-    readonly mCmp: MovingComponent;
+class DiscCollider extends ColliderComponent {
     readonly radius: number;
-    private absBoundingBox: Maths.Rect;
 
     constructor(ent: Engine.Entity, radius: number) {
-        super(ent);
+        super(ent, new Maths.Rect(new Maths.Vector(-radius, -radius), new Maths.Vector(radius * 2, radius * 2)));
         this.radius = radius;
-        this.mCmp = this.getComponent<MovingComponent>(MovingComponent);
-        this.absBoundingBox = new Maths.Rect(new Maths.Vector(0, 0), new Maths.Vector(radius * 2, radius * 2));
-    }
-
-    override move(ctx: Engine.FrameContext) {
-        this.absBoundingBox.pos = this.mCmp.pos.add(new Maths.Vector(-1 * this.radius, -1 * this.radius));
-    }
-
-    // called in globalCollide state
-    override isMaybeColliding(other: ColliderComponent): boolean {
-        if (other instanceof DiscColliderComponent) {
-            return this.absBoundingBox.isIntersecting(other.absBoundingBox);
-        } else {
-            console.error("unsupported collision", { target: this, other: other });
-            throw new Error("unsupported collision");
-        }
     }
 
     // called in globalCollide state by colliding component
     override getContact(other: ColliderComponent): CollisionContact | null {
-        if (other instanceof DiscColliderComponent) {
-            let tPos = this.mCmp.pos;
-            let oPos = other.mCmp.pos;
-            let dist = tPos.dist(oPos);
-            if (dist != 0 && dist < (this.radius + other.radius)) {
-                let contactNormal = oPos.subtract(tPos).normalizeInPlace();
-                let contactPoint = contactNormal.scale(this.radius).add(tPos);
-                return { contactPoint: contactPoint, contactNormal: contactNormal };
-            } else {
-                return null;
-            }
+        if (other instanceof DiscCollider) {
+            return solveContactDiscDisc(this, other);
+        } else if (other instanceof BoxCollider) {
+            return solveContactDiscBox(this, other);
         } else {
             console.error("unsupported collision", { target: this, other: other });
             throw new Error("unsupported collision");
@@ -106,9 +144,30 @@ class DiscColliderComponent extends ColliderComponent {
     }
 }
 
+class BoxCollider extends ColliderComponent {
+    constructor(ent: Engine.Entity, relBoundingBox: Maths.Rect) {
+        super(ent, relBoundingBox);
+    }
+
+    // called in globalCollide state by colliding component
+    override getContact(other: ColliderComponent): CollisionContact | null {
+        if (other instanceof DiscCollider) {
+            return reverseCollisionContact(solveContactDiscBox(other, this));
+        } else if (other instanceof BoxCollider) {
+            return solveContactBoxBox(this, other);
+        } else {
+            console.error("unsupported collision", { target: this, other: other });
+            throw new Error("unsupported collision");
+        }
+    }
+}
+
+
+// Body
+
 type CollidingMass = number | null;
 
-abstract class RootCollidingComponent extends Engine.GlobalComponent {
+class RigidBody extends Engine.GlobalComponent {
     readonly mass: CollidingMass;
     readonly rebound: number;
     readonly mCol: ColliderComponent;
@@ -128,14 +187,14 @@ abstract class RootCollidingComponent extends Engine.GlobalComponent {
         this.collisions = [];
     }
 
-    addCollision(other: CollidingComponent, selfContact: CollisionContact) {
+    addCollision(other: RigidBody, selfContact: CollisionContact) {
         this.collisions.push({
             other: other,
             ...selfContact
         });
     }
 
-    static override globalCollide(ctx: Engine.FrameContext, components: Array<CollidingComponent>) {
+    static override globalCollide(ctx: Engine.FrameContext, components: Array<RigidBody>) {
         // TODO compute thanks to an efficient colliding memory structure
         // https://en.wikipedia.org/wiki/Quadtree
         for (let i = 0; i < components.length; i++) {
@@ -147,7 +206,7 @@ abstract class RootCollidingComponent extends Engine.GlobalComponent {
         }
     }
 
-    static solveCollision(a: CollidingComponent, b: CollidingComponent) {
+    static solveCollision(a: RigidBody, b: RigidBody) {
         // adjust pos / speed according to collisions
         // elastic collision from https://en.wikipedia.org/wiki/Elastic_collision
 
@@ -202,16 +261,10 @@ abstract class RootCollidingComponent extends Engine.GlobalComponent {
     }
 }
 
-class CollidingComponent extends RootCollidingComponent {
-    constructor(ent: Engine.Entity, mass: number, rebound: number) {
-        super(ent, mass, rebound);
-    }
-}
-
-class StaticCollidingComponent extends RootCollidingComponent {
+class StaticRigidBody extends RigidBody {
     constructor(ent: Engine.Entity, rebound: number) {
         super(ent, null, rebound);
     }
 }
 
-export { MovingComponent, CollidingComponent, StaticCollidingComponent, DiscColliderComponent }
+export { MovingComponent, RigidBody, StaticRigidBody, DiscCollider, BoxCollider }

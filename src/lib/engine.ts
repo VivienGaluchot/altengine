@@ -75,21 +75,21 @@ class Classifier {
         this.nodeByType.get(obj.constructor)?.instances.push(obj);
     }
 
-    * getAllInstances(classType: Function): any {
+    * getAllInstances<Type>(classType: Function): Generator<Type> {
         let rootNode = this.nodeByType.get(classType);
         if (rootNode) {
             for (let obj of rootNode.instances) {
-                yield obj;
+                yield <Type>obj;
             }
             for (let cls of rootNode.children) {
-                for (let obj of this.getAllInstances(cls)) {
-                    yield obj;
+                for (let obj of this.getAllInstances<Type>(cls)) {
+                    yield <Type>obj;
                 }
             }
         }
     }
 
-    * getExactInstances(classType: Function): any {
+    * getExactInstances<Type>(classType: Function): Generator<Type> {
         let rootNode = this.nodeByType.get(classType);
         if (rootNode) {
             for (let obj of rootNode.instances) {
@@ -110,9 +110,9 @@ class Classifier {
         }
     }
 
-    getUniqueInstance(classType: Function): any {
+    getUniqueInstance<Type>(classType: Function): Type {
         let instance = null;
-        for (let obj of this.getAllInstances(classType)) {
+        for (let obj of this.getAllInstances<Type>(classType)) {
             if (instance == null) {
                 instance = obj;
             } else {
@@ -147,6 +147,10 @@ class Component {
 
     getComponent<Type extends Component>(cmpClass: Function): Type {
         return this.ent.getComponent(cmpClass);
+    }
+
+    * getComponents<Type extends Component>(cmpClass: Function): Generator<Type> {
+        return this.ent.getComponents(cmpClass);
     }
 
     move(ctx: FrameContext) {
@@ -214,6 +218,11 @@ class Entity {
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
     getComponent<Type extends Component>(cmpClass: Function): Type {
         return <Type>this.classifier.getUniqueInstance(cmpClass);
+    }
+
+    // TODO improve writing to don't need to specify the class in the generic and argument if possible
+    * getComponents<Type extends Component>(cmpClass: Function): Generator<Type> {
+        return this.classifier.getAllInstances(cmpClass);
     }
 
     move(ctx: FrameContext) {
@@ -289,7 +298,7 @@ abstract class RenderLoop {
         this.components = new Classifier(Component);
         this.globalUpdates = new Map();
         this.root = new Entity(this);
-        this.root.registerComponent(new FreqObserverComponent(this.root));
+        new FreqObserverComponent(this.root);
     }
 
     start(viewProvider: ViewProvider) {
