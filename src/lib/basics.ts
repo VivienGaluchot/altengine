@@ -183,7 +183,6 @@ class SvgRectComponent extends SvgComponent {
         this.w = w;
         this.h = h;
         this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-
         this.svgEl = new Svg.Rect(this.mCmp.pos.x - (this.w / 2), this.mCmp.pos.y - (this.h / 2), w, h, style);
     }
 
@@ -201,5 +200,35 @@ class Rect extends Engine.Entity {
     }
 }
 
+class SvgLineComponent extends SvgComponent {
+    svgEl: Svg.Line;
+    mCmp: Physics.MovingComponent;
+    a: Maths.Vector;
+    b: Maths.Vector;
 
-export { SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, SvgRectComponent, SvgCircleComponent }
+    constructor(ent: Engine.Entity, a: Maths.Vector, b: Maths.Vector, style: Svg.SvgStyle) {
+        super(ent, 0);
+        this.a = a;
+        this.b = b;
+        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+        this.svgEl = new Svg.Line(a.x, a.y, b.x, b.y, style);
+    }
+
+    override draw(ctx: Engine.FrameContext) {
+        this.svgEl.x1 = this.mCmp.pos.x + this.a.x;
+        this.svgEl.y1 = this.mCmp.pos.y + this.a.y;
+        this.svgEl.x2 = this.mCmp.pos.x + this.b.x;
+        this.svgEl.y2 = this.mCmp.pos.y + this.b.y;
+    }
+}
+
+class Line extends Engine.Entity {
+    constructor(ent: Engine.Entity, a: Maths.Vector, b: Maths.Vector, style: Svg.SvgStyle) {
+        super(ent);
+        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new SvgLineComponent(this, a, b, style));
+    }
+}
+
+
+export { SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, Line, SvgRectComponent, SvgCircleComponent, SvgLineComponent }

@@ -7,6 +7,9 @@ class Vector {
         this.x = x;
         this.y = y;
     }
+    static center(a, b) {
+        return b.subtract(a).scaleInPlace(1 / 2).addInPlace(a);
+    }
     set(x, y) {
         checkIsFinite(x);
         checkIsFinite(y);
@@ -108,6 +111,30 @@ class Rect {
     maxY() {
         return this.pos.y + this.size.y;
     }
+    topLeft() {
+        return new Vector(0, this.size.y).addInPlace(this.pos);
+    }
+    topRight() {
+        return this.size.add(this.pos);
+    }
+    bottomLeft() {
+        return this.pos;
+    }
+    bottomRight() {
+        return new Vector(this.size.x, 0).addInPlace(this.pos);
+    }
+    top() {
+        return Vector.center(this.topLeft(), this.topRight());
+    }
+    right() {
+        return Vector.center(this.bottomRight(), this.topRight());
+    }
+    bottom() {
+        return Vector.center(this.bottomLeft(), this.bottomRight());
+    }
+    left() {
+        return Vector.center(this.topLeft(), this.topLeft());
+    }
     translateInPlace(v) {
         this.pos.addInPlace(v);
         return this;
@@ -124,11 +151,16 @@ class Rect {
         return interX && interY;
     }
     intersection(r) {
-        let minX = Math.max(this.minX(), r.minX());
-        let minY = Math.max(this.minY(), r.minY());
-        let maxX = Math.min(this.maxX(), r.maxX());
-        let maxY = Math.min(this.maxY(), r.maxY());
-        return new Rect(new Vector(minX, minY), new Vector(maxX - minX, maxY - minY));
+        if (this.isIntersecting(r)) {
+            let minX = Math.max(this.minX(), r.minX());
+            let minY = Math.max(this.minY(), r.minY());
+            let maxX = Math.min(this.maxX(), r.maxX());
+            let maxY = Math.min(this.maxY(), r.maxY());
+            return new Rect(new Vector(minX, minY), new Vector(maxX - minX, maxY - minY));
+        }
+        else {
+            return null;
+        }
     }
 }
 function swipe(x, a, b, va, vb) {

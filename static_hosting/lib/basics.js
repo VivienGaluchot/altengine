@@ -149,4 +149,26 @@ class Rect extends Engine.Entity {
         this.registerComponent(new SvgRectComponent(this, w, h, style));
     }
 }
-export { SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, SvgRectComponent, SvgCircleComponent };
+class SvgLineComponent extends SvgComponent {
+    constructor(ent, a, b, style) {
+        super(ent, 0);
+        this.a = a;
+        this.b = b;
+        this.mCmp = this.getComponent(Physics.MovingComponent);
+        this.svgEl = new Svg.Line(a.x, a.y, b.x, b.y, style);
+    }
+    draw(ctx) {
+        this.svgEl.x1 = this.mCmp.pos.x + this.a.x;
+        this.svgEl.y1 = this.mCmp.pos.y + this.a.y;
+        this.svgEl.x2 = this.mCmp.pos.x + this.b.x;
+        this.svgEl.y2 = this.mCmp.pos.y + this.b.y;
+    }
+}
+class Line extends Engine.Entity {
+    constructor(ent, a, b, style) {
+        super(ent);
+        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new SvgLineComponent(this, a, b, style));
+    }
+}
+export { SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, Line, SvgRectComponent, SvgCircleComponent, SvgLineComponent };

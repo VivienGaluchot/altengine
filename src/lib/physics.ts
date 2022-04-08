@@ -17,19 +17,6 @@ interface Collision {
     other: RigidBody;
 }
 
-// TODO remove, the order should impact the contact point
-// in order to correct colliding position
-function reverseCollisionContact(contact: CollisionContact | null): CollisionContact | null {
-    if (contact) {
-        return {
-            contactNormal: contact.contactNormal.scale(-1),
-            contactPoint: contact.contactPoint
-        };
-    } else {
-        return null;
-    }
-}
-
 function solveContactDiscDisc(a: DiscCollider, b: DiscCollider): CollisionContact | null {
     let aPos = a.mCmp.pos;
     let bPos = b.mCmp.pos;
@@ -44,30 +31,40 @@ function solveContactDiscDisc(a: DiscCollider, b: DiscCollider): CollisionContac
 }
 
 function solveContactDiscBox(a: DiscCollider, b: BoxCollider): CollisionContact | null {
-    // TODO
-    return null;
+    return solveContactBoxBox(<BoxCollider>a, b);
+}
+
+function solveContactBoxDisc(a: BoxCollider, b: DiscCollider): CollisionContact | null {
+    return solveContactBoxBox(a, <BoxCollider>b);
 }
 
 function solveContactBoxBox(a: BoxCollider, b: BoxCollider): CollisionContact | null {
     let aPos = a.mCmp.pos;
     let bPos = b.mCmp.pos;
     let inter = a.relBoundingBox.translate(aPos).intersection(b.relBoundingBox.translate(bPos));
-    let contactPoint = inter.center();
+    if (!inter)
+        return null;
+    let contactPoint;
     let contactNormal;
     if (inter.size.y >= inter.size.x) {
-        if (aPos.x >= bPos.x)
+        if (aPos.x >= bPos.x) {
             contactNormal = new Maths.Vector(-1, 0);
-        else
+            contactPoint = inter.left();
+        } else {
             contactNormal = new Maths.Vector(1, 0);
+            contactPoint = inter.right();
+        }
     } else {
-        if (aPos.y >= bPos.y)
+        if (aPos.y >= bPos.y) {
             contactNormal = new Maths.Vector(0, -1);
-        else
+            contactPoint = inter.bottom();
+        } else {
             contactNormal = new Maths.Vector(0, 1);
+            contactPoint = inter.top();
+        }
     }
     return { contactPoint: contactPoint, contactNormal: contactNormal };
 }
-
 
 
 // Public
@@ -152,7 +149,7 @@ class BoxCollider extends ColliderComponent {
     // called in globalCollide state by colliding component
     override getContact(other: ColliderComponent): CollisionContact | null {
         if (other instanceof DiscCollider) {
-            return reverseCollisionContact(solveContactDiscBox(other, this));
+            return solveContactBoxDisc(this, other);
         } else if (other instanceof BoxCollider) {
             return solveContactBoxBox(this, other);
         } else {
@@ -172,7 +169,7 @@ class RigidBody extends Engine.GlobalComponent {
     readonly rebound: number;
     readonly mCol: ColliderComponent;
     readonly mCmp: MovingComponent;
-    collisions: Array<Collision>;
+    collisions: Array<Collision>;;
 
     constructor(ent: Engine.Entity, mass: CollidingMass, rebound: number) {
         super(ent);

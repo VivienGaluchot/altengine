@@ -1,19 +1,6 @@
 "use strict";
 import * as Maths from './maths.js';
 import * as Engine from './engine.js';
-// TODO remove, the order should impact the contact point
-// in order to correct colliding position
-function reverseCollisionContact(contact) {
-    if (contact) {
-        return {
-            contactNormal: contact.contactNormal.scale(-1),
-            contactPoint: contact.contactPoint
-        };
-    }
-    else {
-        return null;
-    }
-}
 function solveContactDiscDisc(a, b) {
     let aPos = a.mCmp.pos;
     let bPos = b.mCmp.pos;
@@ -28,26 +15,38 @@ function solveContactDiscDisc(a, b) {
     }
 }
 function solveContactDiscBox(a, b) {
-    // TODO
-    return null;
+    return solveContactBoxBox(a, b);
+}
+function solveContactBoxDisc(a, b) {
+    return solveContactBoxBox(a, b);
 }
 function solveContactBoxBox(a, b) {
     let aPos = a.mCmp.pos;
     let bPos = b.mCmp.pos;
     let inter = a.relBoundingBox.translate(aPos).intersection(b.relBoundingBox.translate(bPos));
-    let contactPoint = inter.center();
+    if (!inter)
+        return null;
+    let contactPoint;
     let contactNormal;
     if (inter.size.y >= inter.size.x) {
-        if (aPos.x >= bPos.x)
+        if (aPos.x >= bPos.x) {
             contactNormal = new Maths.Vector(-1, 0);
-        else
+            contactPoint = inter.left();
+        }
+        else {
             contactNormal = new Maths.Vector(1, 0);
+            contactPoint = inter.right();
+        }
     }
     else {
-        if (aPos.y >= bPos.y)
+        if (aPos.y >= bPos.y) {
             contactNormal = new Maths.Vector(0, -1);
-        else
+            contactPoint = inter.bottom();
+        }
+        else {
             contactNormal = new Maths.Vector(0, 1);
+            contactPoint = inter.top();
+        }
     }
     return { contactPoint: contactPoint, contactNormal: contactNormal };
 }
@@ -109,7 +108,7 @@ class BoxCollider extends ColliderComponent {
     // called in globalCollide state by colliding component
     getContact(other) {
         if (other instanceof DiscCollider) {
-            return reverseCollisionContact(solveContactDiscBox(other, this));
+            return solveContactBoxDisc(this, other);
         }
         else if (other instanceof BoxCollider) {
             return solveContactBoxBox(this, other);
@@ -129,6 +128,7 @@ class RigidBody extends Engine.GlobalComponent {
         this.mCmp = this.getComponent(MovingComponent);
         this.collisions = [];
     }
+    ;
     move(ctx) {
         this.collisions = [];
     }

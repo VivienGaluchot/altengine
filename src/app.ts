@@ -17,48 +17,6 @@ function getExpectedElement(id: string) {
 
 // Components
 
-class ConstrainedFloor extends Engine.Component {
-    readonly w: number;
-    readonly h: number;
-    readonly mCmp: Physics.MovingComponent;
-    readonly ranges: Maths.Rect;
-
-    constructor(obj: Engine.Entity, w: number, h: number, ranges: Maths.Rect) {
-        super(obj);
-        this.w = w;
-        this.h = h;
-        this.ranges = ranges;
-        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-    }
-
-    override move(ctx: Engine.FrameContext) {
-        let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-        // walls and floor
-        if (cmp.pos.x > (this.ranges.maxX() - this.w / 2)) {
-            cmp.pos.x = (this.ranges.maxX() - this.w / 2);
-            if (cmp.speed.x > 0) {
-                cmp.speed.x = Math.min(0, cmp.prevSpeed.x * -.9);
-            }
-        }
-        if (cmp.pos.x < (this.ranges.minX() + this.w / 2)) {
-            cmp.pos.x = (this.ranges.minX() + this.w / 2);
-            if (cmp.speed.x < 0) {
-                cmp.speed.x = Math.max(0, cmp.prevSpeed.x * -.9);
-            }
-        }
-        if (cmp.pos.y < (this.ranges.minY() + this.h / 2)) {
-            cmp.pos.y = (this.ranges.minY() + this.h / 2);
-            if (cmp.speed.y < 0) {
-                cmp.speed.y = Math.max(0, cmp.prevSpeed.y * -.9);
-            }
-        }
-        if (cmp.pos.y > (this.ranges.maxY() - this.h / 2)) {
-            cmp.pos.y = (this.ranges.maxY() - this.h / 2);
-            cmp.speed.y = 0;
-        }
-    }
-}
-
 class Falling extends Engine.Component {
     constructor(obj: Engine.Entity) {
         super(obj);
@@ -117,10 +75,8 @@ class Ball extends Basics.Circle {
         this.registerComponent(new Physics.RigidBody(this, radius * radius, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
-            this.registerComponent(new ConstrainedFloor(this, radius * 2, radius * 2, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
         } else {
             this.registerComponent(new Falling(this));
-            this.registerComponent(new ConstrainedFloor(this, radius * 2, radius * 2, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
         }
         // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
@@ -133,12 +89,10 @@ class Bloc extends Basics.Rect {
         this.registerComponent(new Physics.RigidBody(this, w * h, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
-            this.registerComponent(new ConstrainedFloor(this, w, h, new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20))));
         } else {
             this.registerComponent(new Falling(this));
-            this.registerComponent(new ConstrainedFloor(this, w, h, new Maths.Rect(new Maths.Vector(-10, -5), new Maths.Vector(20, 15))));
         }
-        this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
+        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
 
@@ -154,10 +108,15 @@ class CenterFloor extends Basics.Circle {
 }
 
 class Floor extends Basics.Rect {
+    static width: number = 20;
+    static height: number = .1;
+
     constructor(ent: Engine.Entity) {
-        super(ent, 20, .1, { fill: "#8AF8" });
+        super(ent, Floor.width, Floor.height, { fill: "#8AF8" });
+        this.registerComponent(new Physics.BoxCollider(this, new Maths.Rect(new Maths.Vector(-Floor.width / 2, -Floor.height / 2), new Maths.Vector(Floor.width, Floor.height))));
+        this.registerComponent(new Physics.StaticRigidBody(this, .9));
         let cmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-        cmp.pos.y = -5.05;
+        cmp.pos.y = -5 - Floor.height / 2;
     }
 }
 
