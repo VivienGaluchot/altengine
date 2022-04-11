@@ -151,6 +151,19 @@ class SceneA extends Altgn.Scene {
         new Floor(this.root);
         this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#012");
     }
+
+    onclick(event: MouseEvent) {
+        if (event.button == 0 && frame.scene) {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            let p;
+            if (!event.ctrlKey) {
+                p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
+            } else {
+                p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
+            }
+            p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = worldPos;
+        }
+    }
 }
 
 class SceneB extends SceneA {
@@ -187,6 +200,19 @@ class SceneD extends Altgn.Scene {
         this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#112");
         new CenterFloor(this.root, 2);
     }
+
+    onclick(event: MouseEvent) {
+        if (event.button == 0 && frame.scene) {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            let p;
+            if (!event.ctrlKey) {
+                p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
+            } else {
+                p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
+            }
+            p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = worldPos;
+        }
+    }
 }
 
 getExpectedElement("btn-scene-a").onclick = () => {
@@ -208,17 +234,3 @@ getExpectedElement("btn-scene-d").onclick = () => {
 
 frame.showScene(new SceneA());
 updateGridVisibility();
-
-
-el.onclick = (event: MouseEvent) => {
-    if (event.button == 0 && frame.scene) {
-        let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-        let p;
-        if (!event.ctrlKey) {
-            p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
-        } else {
-            p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
-        }
-        p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = worldPos;
-    }
-};

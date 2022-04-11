@@ -50,6 +50,12 @@ class Scene extends Engine.RenderLoop {
             cmp.remove();
         }
     }
+
+    // callbacks
+
+    onclick(event: MouseEvent) {
+        // to override
+    }
 }
 
 class SvgFrame {
@@ -63,7 +69,7 @@ class SvgFrame {
     layers: Map<number, Svg.SvgNode>;
     scene?: Scene;
 
-    constructor(el: Element) {
+    constructor(el: HTMLElement) {
         this.safeView = new Maths.Rect(new Maths.Vector(-10, -10), new Maths.Vector(20, 20));
         this.fullView = new Maths.Rect(new Maths.Vector(0, 0), new Maths.Vector(0, 0));
 
@@ -89,6 +95,9 @@ class SvgFrame {
         if (this.scene) {
             this.scene.pause();
         }
+        this.el.domEl.onclick = (event: MouseEvent) => {
+            this.scene?.onclick(event);
+        };
         this.scene = scene;
         this.scene.play(this);
     }

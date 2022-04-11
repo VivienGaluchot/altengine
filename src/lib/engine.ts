@@ -298,7 +298,7 @@ abstract class RenderLoop {
         this.components = new Classifier(Component);
         this.globalUpdates = new Map();
         this.root = new Entity(this);
-        new FreqObserverComponent(this.root);
+        this.root.registerComponent(new FreqObserverComponent(this.root));
     }
 
     start(viewProvider: ViewProvider) {

@@ -41,6 +41,10 @@ class Scene extends Engine.RenderLoop {
             cmp.remove();
         }
     }
+    // callbacks
+    onclick(event) {
+        // to override
+    }
 }
 class SvgFrame {
     constructor(el) {
@@ -65,6 +69,10 @@ class SvgFrame {
         if (this.scene) {
             this.scene.pause();
         }
+        this.el.domEl.onclick = (event) => {
+            var _a;
+            (_a = this.scene) === null || _a === void 0 ? void 0 : _a.onclick(event);
+        };
         this.scene = scene;
         this.scene.play(this);
     }

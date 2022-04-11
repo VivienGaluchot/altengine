@@ -35,9 +35,9 @@ interface SvgStyle {
 }
 
 class SvgNode {
-    domEl: Element;
+    domEl: SVGElement | HTMLElement;
 
-    constructor(el: Element) {
+    constructor(el: SVGElement | HTMLElement) {
         this.domEl = el;
     }
 
