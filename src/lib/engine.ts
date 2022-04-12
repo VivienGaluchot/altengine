@@ -131,11 +131,23 @@ class Classifier {
 
 // Public
 
-interface FrameContext {
-    dt: number,
-    dtInMs: number,
-    safeView: Maths.Rect,
-    fullView: Maths.Rect,
+interface WorldMouseEvent {
+    worldPos: Maths.Vector;
+    event: MouseEvent;
+}
+
+interface FrameInput {
+    mouseMove?: WorldMouseEvent;
+    mouseClick?: WorldMouseEvent;
+    mouseDown?: WorldMouseEvent;
+    mouseUp?: WorldMouseEvent;
+}
+
+interface FrameContext extends FrameInput {
+    dt: number;
+    dtInMs: number;
+    safeView: Maths.Rect;
+    fullView: Maths.Rect;
 }
 
 class Component {
@@ -153,7 +165,7 @@ class Component {
         return this.ent.getComponents(cmpClass);
     }
 
-    move(ctx: FrameContext) {
+    update(ctx: FrameContext) {
         // to implement
     }
 
@@ -225,12 +237,12 @@ class Entity {
         return this.classifier.getAllInstances(cmpClass);
     }
 
-    move(ctx: FrameContext) {
+    update(ctx: FrameContext) {
         for (let cmp of this.components) {
-            cmp.move(ctx);
+            cmp.update(ctx);
         }
         for (let ent of this.children) {
-            ent.move(ctx);
+            ent.update(ctx);
         }
     }
 
@@ -294,11 +306,14 @@ abstract class RenderLoop {
 
     viewProvider?: ViewProvider;
 
+    frameInput: FrameInput;
+
     constructor() {
         this.components = new Classifier(Component);
         this.globalUpdates = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
+        this.frameInput = {};
     }
 
     start(viewProvider: ViewProvider) {
@@ -359,14 +374,16 @@ abstract class RenderLoop {
             dtInMs: dtInMs,
             safeView: this.viewProvider.safeView.clone(),
             fullView: this.viewProvider.fullView.clone(),
+            ...this.frameInput
         };
+        this.frameInput = {}
 
         // TODO register the component at a specific render step
         // use a single callback for every steps
         // pass the step as arg
 
-        // 1. move
-        this.root.move(ctx);
+        // 1. update
+        this.root.update(ctx);
 
         // 2. collide
         this.globalCollide(ctx);

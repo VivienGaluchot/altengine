@@ -6,7 +6,6 @@ import * as Maths from './maths.js';
 import * as Basics from './basics.js';
 
 
-
 class Scene extends Engine.RenderLoop {
     frame?: SvgFrame;
 
@@ -21,6 +20,23 @@ class Scene extends Engine.RenderLoop {
         for (let cmp of this.components.getAllInstances<Basics.SvgComponent>(Basics.SvgComponent)) {
             this.showSvgComponent(cmp);
         }
+        let el = frame.el.domEl;
+        el.onclick = (event: MouseEvent) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseClick = { worldPos: worldPos, event: event };
+        };
+        el.onmousemove = (event: MouseEvent) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseMove = { worldPos: worldPos, event: event };
+        };
+        el.onmousedown = (event: MouseEvent) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseDown = { worldPos: worldPos, event: event };
+        };
+        el.onmouseup = (event: MouseEvent) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseUp = { worldPos: worldPos, event: event };
+        };
         this.start(frame);
     }
 
@@ -45,16 +61,14 @@ class Scene extends Engine.RenderLoop {
     }
 
     pause() {
+        if (this.frame) {
+            this.frame.el.domEl.onclick = null;
+            this.frame.el.domEl.onmousemove = null;
+        }
         this.stop();
         for (let cmp of this.components.getAllInstances<Basics.SvgComponent>(Basics.SvgComponent)) {
             cmp.remove();
         }
-    }
-
-    // callbacks
-
-    onclick(event: MouseEvent) {
-        // to override
     }
 }
 
@@ -95,9 +109,6 @@ class SvgFrame {
         if (this.scene) {
             this.scene.pause();
         }
-        this.el.domEl.onclick = (event: MouseEvent) => {
-            this.scene?.onclick(event);
-        };
         this.scene = scene;
         this.scene.play(this);
     }

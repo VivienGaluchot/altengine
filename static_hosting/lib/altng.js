@@ -14,6 +14,23 @@ class Scene extends Engine.RenderLoop {
         for (let cmp of this.components.getAllInstances(Basics.SvgComponent)) {
             this.showSvgComponent(cmp);
         }
+        let el = frame.el.domEl;
+        el.onclick = (event) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseClick = { worldPos: worldPos, event: event };
+        };
+        el.onmousemove = (event) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseMove = { worldPos: worldPos, event: event };
+        };
+        el.onmousedown = (event) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseDown = { worldPos: worldPos, event: event };
+        };
+        el.onmouseup = (event) => {
+            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
+            this.frameInput.mouseUp = { worldPos: worldPos, event: event };
+        };
         this.start(frame);
     }
     showSvgComponent(cmp) {
@@ -36,14 +53,14 @@ class Scene extends Engine.RenderLoop {
         }
     }
     pause() {
+        if (this.frame) {
+            this.frame.el.domEl.onclick = null;
+            this.frame.el.domEl.onmousemove = null;
+        }
         this.stop();
         for (let cmp of this.components.getAllInstances(Basics.SvgComponent)) {
             cmp.remove();
         }
-    }
-    // callbacks
-    onclick(event) {
-        // to override
     }
 }
 class SvgFrame {
@@ -69,10 +86,6 @@ class SvgFrame {
         if (this.scene) {
             this.scene.pause();
         }
-        this.el.domEl.onclick = (event) => {
-            var _a;
-            (_a = this.scene) === null || _a === void 0 ? void 0 : _a.onclick(event);
-        };
         this.scene = scene;
         this.scene.play(this);
     }

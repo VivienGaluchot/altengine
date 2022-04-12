@@ -90,7 +90,7 @@ class MovingComponent extends Engine.Component {
         this.prevDt = 0;
     }
 
-    override move(ctx: Engine.FrameContext) {
+    override update(ctx: Engine.FrameContext) {
         this.prevPos = this.pos.clone();
         this.prevSpeed = this.speed.clone();
         this.prevAcc = this.acc.clone();
@@ -180,7 +180,7 @@ class RigidBody extends Engine.GlobalComponent {
         this.collisions = [];
     }
 
-    override move(ctx: Engine.FrameContext) {
+    override update(ctx: Engine.FrameContext) {
         this.collisions = [];
     }
 

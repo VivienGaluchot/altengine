@@ -118,7 +118,7 @@ class Component {
     *getComponents(cmpClass) {
         return this.ent.getComponents(cmpClass);
     }
-    move(ctx) {
+    update(ctx) {
         // to implement
     }
     collide(ctx) {
@@ -174,12 +174,12 @@ class Entity {
     *getComponents(cmpClass) {
         return this.classifier.getAllInstances(cmpClass);
     }
-    move(ctx) {
+    update(ctx) {
         for (let cmp of this.components) {
-            cmp.move(ctx);
+            cmp.update(ctx);
         }
         for (let ent of this.children) {
-            ent.move(ctx);
+            ent.update(ctx);
         }
     }
     collide(ctx) {
@@ -223,6 +223,7 @@ class RenderLoop {
         this.globalUpdates = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
+        this.frameInput = {};
     }
     start(viewProvider) {
         this.viewProvider = viewProvider;
@@ -273,17 +274,13 @@ class RenderLoop {
         if (!this.viewProvider) {
             throw new Error("view provider not defined");
         }
-        const ctx = {
-            dt: dtInMs / 1000,
-            dtInMs: dtInMs,
-            safeView: this.viewProvider.safeView.clone(),
-            fullView: this.viewProvider.fullView.clone(),
-        };
+        const ctx = Object.assign({ dt: dtInMs / 1000, dtInMs: dtInMs, safeView: this.viewProvider.safeView.clone(), fullView: this.viewProvider.fullView.clone() }, this.frameInput);
+        this.frameInput = {};
         // TODO register the component at a specific render step
         // use a single callback for every steps
         // pass the step as arg
-        // 1. move
-        this.root.move(ctx);
+        // 1. update
+        this.root.update(ctx);
         // 2. collide
         this.globalCollide(ctx);
         this.root.collide(ctx);

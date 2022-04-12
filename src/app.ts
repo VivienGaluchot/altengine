@@ -32,7 +32,7 @@ class FallingToCenter extends Engine.Component {
         this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
     }
 
-    override move(ctx: Engine.FrameContext) {
+    override update(ctx: Engine.FrameContext) {
         // TODO force management (to be executed before moving ?)
         if (this.mCmp.pos.norm() > 0) {
             this.mCmp.acc = this.mCmp.pos.normalize().scaleInPlace(-9.81);
@@ -61,6 +61,22 @@ class CollideBlink extends Engine.Component {
             this.svgCmp.svgEl.style = { fill: this.collidingFill };
         } else {
             this.svgCmp.svgEl.style = { fill: this.noCollidingFill };
+        }
+    }
+}
+
+class Spawner extends Engine.Component {
+    override update(ctx: Engine.FrameContext) {
+        if (ctx.mouseClick) {
+            if (ctx.mouseClick.event.button == 0 && frame.scene) {
+                let p;
+                if (!ctx.mouseClick.event.ctrlKey) {
+                    p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
+                } else {
+                    p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
+                }
+                p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = ctx.mouseClick.worldPos;
+            }
         }
     }
 }
@@ -148,21 +164,9 @@ window.onresize = () => {
 class SceneA extends Altgn.Scene {
     constructor() {
         super();
-        new Floor(this.root);
+        this.root.registerComponent(new Spawner(this.root));
         this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#012");
-    }
-
-    onclick(event: MouseEvent) {
-        if (event.button == 0 && frame.scene) {
-            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            let p;
-            if (!event.ctrlKey) {
-                p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
-            } else {
-                p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
-            }
-            p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = worldPos;
-        }
+        new Floor(this.root);
     }
 }
 
@@ -197,21 +201,9 @@ class SceneC extends SceneA {
 class SceneD extends Altgn.Scene {
     constructor() {
         super();
+        this.root.registerComponent(new Spawner(this.root));
         this.root.getComponent<Basics.SvgBackgroundComponent>(Basics.SvgBackgroundComponent).setColor("#112");
         new CenterFloor(this.root, 2);
-    }
-
-    onclick(event: MouseEvent) {
-        if (event.button == 0 && frame.scene) {
-            let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            let p;
-            if (!event.ctrlKey) {
-                p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
-            } else {
-                p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
-            }
-            p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = worldPos;
-        }
     }
 }
 

@@ -62,7 +62,7 @@ class MovingComponent extends Engine.Component {
         this.prevAcc = new Maths.Vector(0, 0);
         this.prevDt = 0;
     }
-    move(ctx) {
+    update(ctx) {
         this.prevPos = this.pos.clone();
         this.prevSpeed = this.speed.clone();
         this.prevAcc = this.acc.clone();
@@ -129,7 +129,7 @@ class RigidBody extends Engine.GlobalComponent {
         this.collisions = [];
     }
     ;
-    move(ctx) {
+    update(ctx) {
         this.collisions = [];
     }
     addCollision(other, selfContact) {
