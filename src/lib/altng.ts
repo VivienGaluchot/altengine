@@ -8,6 +8,7 @@ import * as Basics from './basics.js';
 
 class Scene extends Engine.RenderLoop {
     frame?: SvgFrame;
+    lastMouseDown?: Engine.WorldMouseEvent;
 
     constructor() {
         super();
@@ -17,47 +18,40 @@ class Scene extends Engine.RenderLoop {
 
     play(frame: SvgFrame) {
         this.frame = frame;
-        for (let cmp of this.components.getAllInstances<Basics.SvgComponent>(Basics.SvgComponent)) {
-            this.showSvgComponent(cmp);
-        }
         let el = frame.el.domEl;
-        el.onclick = (event: MouseEvent) => {
+        el.onmousedown = (event: MouseEvent) => {
             let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            this.frameInput.mouseClick = { worldPos: worldPos, event: event };
+            this.frameInput.mouseDown = {
+                worldPos: worldPos,
+                event: event
+            };
+            this.lastMouseDown = this.frameInput.mouseDown;
         };
         el.onmousemove = (event: MouseEvent) => {
             let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            this.frameInput.mouseMove = { worldPos: worldPos, event: event };
+            this.frameInput.mouseMove = {
+                worldPos: worldPos,
+                event: event,
+                relatedMouseDown: this.lastMouseDown
+            };
         };
-        el.onmousedown = (event: MouseEvent) => {
+        el.onclick = (event: MouseEvent) => {
             let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            this.frameInput.mouseDown = { worldPos: worldPos, event: event };
+            this.frameInput.mouseClick = {
+                worldPos: worldPos,
+                event: event,
+                relatedMouseDown: this.lastMouseDown
+            };
         };
         el.onmouseup = (event: MouseEvent) => {
             let worldPos = frame.domToWorld(new Maths.Vector(event.clientX, event.clientY));
-            this.frameInput.mouseUp = { worldPos: worldPos, event: event };
+            this.frameInput.mouseUp = {
+                worldPos: worldPos,
+                event: event,
+                relatedMouseDown: this.lastMouseDown
+            };
         };
         this.start(frame);
-    }
-
-    showSvgComponent(cmp: Basics.SvgComponent) {
-        if (!this.frame) {
-            throw new Error("frame not defined");
-        }
-        let layerEl = this.frame.layers.get(cmp.layer);
-        if (layerEl) {
-            cmp.addToNode(layerEl);
-        } else {
-            console.error("layer not defined in frame", { cmp, frame: this.frame });
-            throw new Error(`layer ${cmp.layer} not defined in frame`);
-        }
-    }
-
-    override registerComponent(cmp: Engine.Component) {
-        super.registerComponent(cmp);
-        if (cmp instanceof Basics.SvgComponent && this.frame) {
-            this.showSvgComponent(cmp);
-        }
     }
 
     pause() {
@@ -66,8 +60,18 @@ class Scene extends Engine.RenderLoop {
             this.frame.el.domEl.onmousemove = null;
         }
         this.stop();
-        for (let cmp of this.components.getAllInstances<Basics.SvgComponent>(Basics.SvgComponent)) {
-            cmp.remove();
+    }
+
+    showSvgNode(el: Svg.SvgNode, layer: number) {
+        if (!this.frame) {
+            throw new Error("frame not defined");
+        }
+        let layerEl = this.frame.layers.get(layer);
+        if (layerEl) {
+            layerEl.appendChild(el);
+        } else {
+            console.error("layer not defined in frame", { el, frame: this.frame });
+            throw new Error(`layer ${layer} not defined in frame`);
         }
     }
 }

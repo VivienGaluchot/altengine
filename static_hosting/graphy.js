@@ -2,6 +2,7 @@
 import * as Altgn from './lib/altng.js';
 import * as Engine from './lib/engine.js';
 import * as Physics from './lib/physics.js';
+import * as Maths from './lib/maths.js';
 import * as Basics from './lib/basics.js';
 function getExpectedElement(id) {
     let el = document.getElementById(id);
@@ -10,22 +11,19 @@ function getExpectedElement(id) {
     return el;
 }
 // Components
-// TODO find a cleaner way, maybe with an event list in the ctx
-let preventNextSpawn = false;
-class NodeSpawner extends Engine.Component {
+class NodeManager extends Engine.Component {
     update(ctx) {
-        if (ctx.mouseClick) {
-            if (preventNextSpawn) {
-                preventNextSpawn = false;
+        let input = ctx.mouseClick;
+        if (input && input.event.button == 0 && !input.event.ctrlKey) {
+            let hasMovedTooMuch = false;
+            if (input.relatedMouseDown) {
+                let start = new Maths.Vector(input.relatedMouseDown.event.clientX, input.relatedMouseDown.event.clientY);
+                let end = new Maths.Vector(input.event.clientX, input.event.clientY);
+                hasMovedTooMuch = end.dist(start) > 20;
             }
-            else {
-                if (ctx.mouseClick.event.button == 0) {
-                    console.log(ctx.mouseClick.event);
-                    if (!ctx.mouseClick.event.ctrlKey) {
-                        let p = new Node(this.ent);
-                        p.getComponent(Physics.MovingComponent).pos = ctx.mouseClick.worldPos;
-                    }
-                }
+            if (!hasMovedTooMuch) {
+                let p = new Node(this.ent);
+                p.getComponent(Physics.MovingComponent).pos = input.worldPos;
             }
         }
     }
@@ -42,7 +40,7 @@ class MoveMouse extends Engine.Component {
             this.startDrag = undefined;
         }
         else if (ctx.mouseDown) {
-            if (ctx.mouseDown.worldPos.dist(mCmp.pos) < this.radius) {
+            if (ctx.mouseDown.worldPos.squareDist(mCmp.pos) < (this.radius * this.radius)) {
                 this.startDrag = ctx.mouseDown.worldPos;
             }
         }
@@ -50,10 +48,15 @@ class MoveMouse extends Engine.Component {
             let deltaPos = ctx.mouseMove.worldPos.subtract(this.startDrag);
             this.startDrag = ctx.mouseMove.worldPos;
             mCmp.pos.addInPlace(deltaPos);
-            preventNextSpawn = true;
         }
         if (ctx.mouseMove) {
-            this.isHover = ctx.mouseMove.worldPos.dist(mCmp.pos) < this.radius;
+            this.isHover = ctx.mouseMove.worldPos.squareDist(mCmp.pos) < (this.radius * this.radius);
+        }
+        if (this.isHover) {
+            let input = ctx.mouseClick;
+            if (input && input.event.button == 0 && input.event.ctrlKey) {
+                this.ent.remove();
+            }
         }
     }
 }
@@ -61,7 +64,7 @@ class MoveMouse extends Engine.Component {
 class Manager extends Engine.Entity {
     constructor(ent) {
         super(ent);
-        this.registerComponent(new NodeSpawner(this));
+        this.registerComponent(new NodeManager(this));
     }
 }
 class Node extends Basics.Circle {
@@ -106,7 +109,6 @@ class SceneA extends Altgn.Scene {
         super();
         this.root.getComponent(Basics.SvgBackgroundComponent).setColor("#012");
         new Manager(this.root);
-        new Node(this.root);
     }
 }
 getExpectedElement("btn-reset").onclick = () => {

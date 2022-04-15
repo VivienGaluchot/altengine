@@ -57,6 +57,10 @@ class Classifier {
         }
     }
 
+    hasClass(cls: Function) {
+        return this.nodeByType.has(cls);
+    }
+
     add(obj: any) {
         // enrich node tree
         let prevCls = null;
@@ -136,11 +140,15 @@ interface WorldMouseEvent {
     event: MouseEvent;
 }
 
+interface WorldMousePressedEvent extends WorldMouseEvent {
+    relatedMouseDown?: WorldMouseEvent;
+}
+
 interface FrameInput {
-    mouseMove?: WorldMouseEvent;
-    mouseClick?: WorldMouseEvent;
     mouseDown?: WorldMouseEvent;
-    mouseUp?: WorldMouseEvent;
+    mouseClick?: WorldMousePressedEvent;
+    mouseMove?: WorldMousePressedEvent;
+    mouseUp?: WorldMousePressedEvent;
 }
 
 interface FrameContext extends FrameInput {
@@ -151,9 +159,15 @@ interface FrameContext extends FrameInput {
 }
 
 class Component {
+    static nextId: number = 0;
+    cmpId: number;
+
     ent: Entity;
 
     constructor(ent: Entity) {
+        this.cmpId = Component.nextId;
+        Component.nextId++;
+
         this.ent = ent;
     }
 
@@ -165,6 +179,12 @@ class Component {
         return this.ent.getComponents(cmpClass);
     }
 
+    // callbacks
+
+    initialize() {
+        // to implement
+    }
+
     update(ctx: FrameContext) {
         // to implement
     }
@@ -174,6 +194,10 @@ class Component {
     }
 
     draw(ctx: FrameContext) {
+        // to implement
+    }
+
+    terminate() {
         // to implement
     }
 }
@@ -189,14 +213,20 @@ class GlobalComponent extends Component {
 }
 
 class Entity {
+    static nextId: number = 0;
+    entId: number;
+
     loop: RenderLoop;
     parentEnt?: Entity;
     components: Array<Component>;
     classifier: Classifier;
-    componentsByClass: Map<Function, Component>;
     children: Set<Entity>;
+    isInitialized: boolean;
 
     constructor(parent: RenderLoop | Entity) {
+        this.entId = Entity.nextId;
+        Entity.nextId++;
+
         if (parent instanceof Entity) {
             this.loop = parent.loop;
             this.parentEnt = parent;
@@ -205,8 +235,9 @@ class Entity {
         }
         this.components = [];
         this.classifier = new Classifier(Component);
-        this.componentsByClass = new Map();
         this.children = new Set();
+        this.isInitialized = false;
+
         if (this.parentEnt) {
             this.parentEnt.addChild(this);
         }
@@ -214,17 +245,38 @@ class Entity {
 
     addChild(ent: Entity) {
         this.children.add(ent);
+        if (this.isInitialized) {
+            ent.initialize();
+        }
+    }
+
+    removeChild(ent: Entity) {
+        this.children.delete(ent);
+        if (this.isInitialized) {
+            ent.terminate();
+        }
+    }
+
+    remove() {
+        if (this.parentEnt) {
+            this.parentEnt.removeChild(this);
+        } else {
+            throw new Error(`root entity not removable`);
+        }
     }
 
     registerComponent(cmp: Component) {
-        let cmpClass = cmp.constructor;
-        if (this.componentsByClass.has(cmpClass)) {
-            throw new Error(`component already registered for class ${cmpClass}`);
+        if (this.classifier.hasClass(cmp.constructor)) {
+            throw new Error(`component already registered for class ${cmp.constructor}`);
         }
-        this.componentsByClass.set(cmpClass, cmp);
-        this.loop.registerComponent(cmp);
         this.classifier.add(cmp);
+        if (cmp instanceof GlobalComponent) {
+            this.loop.registerGlobalComponent(cmp);
+        }
         this.components.push(cmp);
+        if (this.isInitialized) {
+            cmp.initialize();
+        }
     }
 
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
@@ -237,30 +289,44 @@ class Entity {
         return this.classifier.getAllInstances(cmpClass);
     }
 
-    update(ctx: FrameContext) {
+
+    private * enumerate(): Generator<Component | Entity> {
         for (let cmp of this.components) {
-            cmp.update(ctx);
+            yield cmp;
         }
         for (let ent of this.children) {
-            ent.update(ctx);
+            yield ent;
+        }
+    }
+
+    initialize() {
+        for (let el of this.enumerate()) {
+            el.initialize();
+        }
+        this.isInitialized = true;
+    }
+
+    update(ctx: FrameContext) {
+        for (let el of this.enumerate()) {
+            el.update(ctx);
         }
     }
 
     collide(ctx: FrameContext) {
-        for (let cmp of this.components) {
-            cmp.collide(ctx);
-        }
-        for (let ent of this.children) {
-            ent.collide(ctx);
+        for (let el of this.enumerate()) {
+            el.collide(ctx);
         }
     }
 
     draw(ctx: FrameContext) {
-        for (let cmp of this.components) {
-            cmp.draw(ctx);
+        for (let el of this.enumerate()) {
+            el.draw(ctx);
         }
-        for (let ent of this.children) {
-            ent.draw(ctx);
+    }
+
+    terminate() {
+        for (let el of this.enumerate()) {
+            el.terminate();
         }
     }
 }
@@ -300,7 +366,7 @@ abstract class RenderLoop {
 
     lastLoopTime?: number;
     reqFrame?: number;
-    components: Classifier;
+    glbComponents: Classifier;
     // Map callback -> Class Object
     globalUpdates: Map<Function, Function>;
 
@@ -309,7 +375,7 @@ abstract class RenderLoop {
     frameInput: FrameInput;
 
     constructor() {
-        this.components = new Classifier(Component);
+        this.glbComponents = new Classifier(GlobalComponent);
         this.globalUpdates = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
@@ -319,48 +385,49 @@ abstract class RenderLoop {
     start(viewProvider: ViewProvider) {
         this.viewProvider = viewProvider;
         this.lastLoopTime = undefined;
-        let loop = () => {
-            this.execLoop();
+        this.root.initialize();
+
+        let loop = (time: DOMHighResTimeStamp) => {
+            this.execLoop(time);
             this.reqFrame = window.requestAnimationFrame(loop);
         };
-        loop();
+        loop(0);
     }
 
     stop() {
         if (this.reqFrame) {
             window.cancelAnimationFrame(this.reqFrame);
         }
+        this.root.terminate();
     }
 
-    registerComponent(cmp: Component) {
-        this.components.add(cmp);
+    registerGlobalComponent(cmp: GlobalComponent) {
+        this.glbComponents.add(cmp);
     }
 
     private globalCollide(ctx: FrameContext) {
         // keep track of globalCollide functions already called
         // prevent to call it multiple times when inherited but not overridden
         let called = new Set<Function>();
-        for (let targetCls of this.components.getAllChildClass(GlobalComponent)) {
+        for (let targetCls of this.glbComponents.getAllChildClass(GlobalComponent)) {
             for (let cls of getClassAncestorsChildToParent(targetCls, GlobalComponent).reverse()) {
                 let cbk = (<any>cls).globalCollide;
                 if (!called.has(cbk)) {
-                    let components = [];
-                    for (let obj of this.components.getAllInstances(cls)) {
-                        components.push(obj);
+                    let glbComponents = [];
+                    for (let obj of this.glbComponents.getAllInstances(cls)) {
+                        glbComponents.push(obj);
                     }
-                    // console.debug("run callback from ", cls.name, components.length);
-                    (<any>cls).globalCollide(ctx, components);
+                    (<any>cls).globalCollide(ctx, glbComponents);
                     called.add(cbk);
                 }
             }
         }
     }
 
-    execLoop() {
+    execLoop(timeInMs: DOMHighResTimeStamp) {
         let dtInMs = 0;
-        let loopTime = Date.now();
         if (this.lastLoopTime) {
-            dtInMs = loopTime - this.lastLoopTime;
+            dtInMs = timeInMs - this.lastLoopTime;
         }
         if (dtInMs > 100) {
             console.warn(`render too slow, cap render period from ${dtInMs}ms to 100ms`);
@@ -392,8 +459,8 @@ abstract class RenderLoop {
         // 3. draw
         this.root.draw(ctx);
 
-        this.lastLoopTime = loopTime;
+        this.lastLoopTime = timeInMs;
     }
 }
 
-export { FrameContext, RenderLoop, Entity, Component, GlobalComponent }
+export { FrameContext, RenderLoop, Entity, Component, GlobalComponent, WorldMouseEvent }

@@ -2,17 +2,12 @@
 import * as Svg from './svg.js';
 import * as Engine from './engine.js';
 import * as Physics from './physics.js';
+import * as Altgn from './altng.js';
 // Public
 class SvgComponent extends Engine.Component {
     constructor(ent, layer) {
         super(ent);
         this.layer = layer;
-    }
-    addToNode(node) {
-        node.appendChild(this.svgEl);
-    }
-    remove() {
-        this.svgEl.domEl.remove();
     }
     setVisibility(isVisible) {
         if (isVisible) {
@@ -21,6 +16,17 @@ class SvgComponent extends Engine.Component {
         else {
             this.svgEl.setAttribute("visibility", "hidden");
         }
+    }
+    initialize() {
+        if (this.ent.loop instanceof Altgn.Scene) {
+            this.ent.loop.showSvgNode(this.svgEl, this.layer);
+        }
+        else {
+            console.error("unexpected loop type", this.ent.loop);
+        }
+    }
+    terminate() {
+        this.svgEl.domEl.remove();
     }
 }
 class SvgGridComponent extends SvgComponent {

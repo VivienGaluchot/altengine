@@ -57,10 +57,13 @@ class Vector {
         checkIsFinite(r);
         return this.scaleInPlace(r);
     }
-    dist(v) {
+    squareDist(v) {
         let dx = this.x - v.x;
         let dy = this.y - v.y;
-        return Math.sqrt(dx * dx + dy * dy);
+        return dx * dx + dy * dy;
+    }
+    dist(v) {
+        return Math.sqrt(this.squareDist(v));
     }
     dotProduct(v) {
         return this.x * v.x + this.y * v.y;

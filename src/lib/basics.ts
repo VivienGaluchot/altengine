@@ -4,6 +4,7 @@ import * as Svg from './svg.js';
 import * as Engine from './engine.js';
 import * as Physics from './physics.js';
 import * as Maths from './maths.js';
+import * as Altgn from './altng.js';
 
 
 // Public
@@ -17,20 +18,24 @@ abstract class SvgComponent extends Engine.Component {
         this.layer = layer;
     }
 
-    addToNode(node: Svg.SvgNode) {
-        node.appendChild(this.svgEl);
-    }
-
-    remove() {
-        this.svgEl.domEl.remove();
-    }
-
     setVisibility(isVisible: boolean) {
         if (isVisible) {
             this.svgEl.setAttribute("visibility", "visible");
         } else {
             this.svgEl.setAttribute("visibility", "hidden");
         }
+    }
+
+    override initialize() {
+        if (this.ent.loop instanceof Altgn.Scene) {
+            this.ent.loop.showSvgNode(this.svgEl, this.layer);
+        } else {
+            console.error("unexpected loop type", this.ent.loop);
+        }
+    }
+
+    override terminate() {
+        this.svgEl.domEl.remove();
     }
 }
 

@@ -77,10 +77,14 @@ class Vector {
         return this.scaleInPlace(r);
     }
 
-    dist(v: Vector) {
+    squareDist(v: Vector) {
         let dx = this.x - v.x;
         let dy = this.y - v.y;
-        return Math.sqrt(dx * dx + dy * dy);
+        return dx * dx + dy * dy;
+    }
+
+    dist(v: Vector) {
+        return Math.sqrt(this.squareDist(v));
     }
 
     dotProduct(v: Vector) {
