@@ -145,6 +145,9 @@ class GlobalComponent extends Component {
     constructor(ent) {
         super(ent);
     }
+    static globalUpdate(ctx, components) {
+        // to implement
+    }
     static globalCollide(ctx, components) {
         // to implement
     }
@@ -266,7 +269,6 @@ class FreqObserverComponent extends Component {
 class RenderLoop {
     constructor() {
         this.glbComponents = new Classifier(GlobalComponent);
-        this.globalUpdates = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
         this.frameInput = {};
@@ -289,6 +291,24 @@ class RenderLoop {
     }
     registerGlobalComponent(cmp) {
         this.glbComponents.add(cmp);
+    }
+    globalUpdate(ctx) {
+        // keep track of globalUpdate functions already called
+        // prevent to call it multiple times when inherited but not overridden
+        let called = new Set();
+        for (let targetCls of this.glbComponents.getAllChildClass(GlobalComponent)) {
+            for (let cls of getClassAncestorsChildToParent(targetCls, GlobalComponent).reverse()) {
+                let cbk = cls.globalUpdate;
+                if (!called.has(cbk)) {
+                    let glbComponents = [];
+                    for (let obj of this.glbComponents.getAllInstances(cls)) {
+                        glbComponents.push(obj);
+                    }
+                    cls.globalUpdate(ctx, glbComponents);
+                    called.add(cbk);
+                }
+            }
+        }
     }
     globalCollide(ctx) {
         // keep track of globalCollide functions already called
@@ -326,6 +346,7 @@ class RenderLoop {
         // use a single callback for every steps
         // pass the step as arg
         // 1. update
+        this.globalUpdate(ctx);
         this.root.update(ctx);
         // 2. collide
         this.globalCollide(ctx);

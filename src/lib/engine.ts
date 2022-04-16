@@ -207,7 +207,11 @@ class GlobalComponent extends Component {
         super(ent);
     }
 
-    static globalCollide(ctx: FrameContext, components: Array<Component>) {
+    static globalUpdate(ctx: FrameContext, components: Array<GlobalComponent>) {
+        // to implement
+    }
+
+    static globalCollide(ctx: FrameContext, components: Array<GlobalComponent>) {
         // to implement
     }
 }
@@ -367,8 +371,6 @@ abstract class RenderLoop {
     lastLoopTime?: number;
     reqFrame?: number;
     glbComponents: Classifier;
-    // Map callback -> Class Object
-    globalUpdates: Map<Function, Function>;
 
     viewProvider?: ViewProvider;
 
@@ -376,7 +378,6 @@ abstract class RenderLoop {
 
     constructor() {
         this.glbComponents = new Classifier(GlobalComponent);
-        this.globalUpdates = new Map();
         this.root = new Entity(this);
         this.root.registerComponent(new FreqObserverComponent(this.root));
         this.frameInput = {};
@@ -403,6 +404,25 @@ abstract class RenderLoop {
 
     registerGlobalComponent(cmp: GlobalComponent) {
         this.glbComponents.add(cmp);
+    }
+
+    private globalUpdate(ctx: FrameContext) {
+        // keep track of globalUpdate functions already called
+        // prevent to call it multiple times when inherited but not overridden
+        let called = new Set<Function>();
+        for (let targetCls of this.glbComponents.getAllChildClass(GlobalComponent)) {
+            for (let cls of getClassAncestorsChildToParent(targetCls, GlobalComponent).reverse()) {
+                let cbk = (<any>cls).globalUpdate;
+                if (!called.has(cbk)) {
+                    let glbComponents = [];
+                    for (let obj of this.glbComponents.getAllInstances(cls)) {
+                        glbComponents.push(obj);
+                    }
+                    (<any>cls).globalUpdate(ctx, glbComponents);
+                    called.add(cbk);
+                }
+            }
+        }
     }
 
     private globalCollide(ctx: FrameContext) {
@@ -450,6 +470,7 @@ abstract class RenderLoop {
         // pass the step as arg
 
         // 1. update
+        this.globalUpdate(ctx);
         this.root.update(ctx);
 
         // 2. collide

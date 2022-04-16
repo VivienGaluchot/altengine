@@ -2,7 +2,6 @@
 import * as Altgn from './lib/altng.js';
 import * as Engine from './lib/engine.js';
 import * as Physics from './lib/physics.js';
-import * as Maths from './lib/maths.js';
 import * as Basics from './lib/basics.js';
 function getExpectedElement(id) {
     let el = document.getElementById(id);
@@ -11,50 +10,70 @@ function getExpectedElement(id) {
     return el;
 }
 // Components
-class NodeManager extends Engine.Component {
+class MouseController extends Engine.Component {
+    constructor(ent) {
+        super(ent);
+        this.mouseTarget = null;
+    }
     update(ctx) {
-        let input = ctx.mouseClick;
-        if (input && input.event.button == 0 && !input.event.ctrlKey) {
-            let hasMovedTooMuch = false;
-            if (input.relatedMouseDown) {
-                let start = new Maths.Vector(input.relatedMouseDown.event.clientX, input.relatedMouseDown.event.clientY);
-                let end = new Maths.Vector(input.event.clientX, input.event.clientY);
-                hasMovedTooMuch = end.dist(start) > 20;
-            }
-            if (!hasMovedTooMuch) {
-                let p = new Node(this.ent);
+        // spawn
+        if (this.mouseTarget == null) {
+            let input = ctx.mouseClick;
+            if (input && input.event.button == 0 && !input.event.ctrlKey) {
+                let p = new Node(this.ent, this);
                 p.getComponent(Physics.MovingComponent).pos = input.worldPos;
             }
         }
     }
 }
-class MoveMouse extends Engine.Component {
-    constructor(ent, radius) {
+class MouseControlled extends Engine.GlobalComponent {
+    constructor(ent, mng, radius) {
         super(ent);
-        this.isHover = false;
         this.radius = radius;
+        this.mng = mng;
+        this.startDrag = null;
+        this.pCmp = this.getComponent(Physics.MovingComponent);
+    }
+    isTarget() {
+        return this.mng.mouseTarget == this;
+    }
+    static globalUpdate(ctx, components) {
+        // find a single mouseTarget per MouseControlled and set isHover
+        if (ctx.mouseMove) {
+            MouseControlled.lastMouseMove = ctx.mouseMove;
+        }
+        for (let cmp of components) {
+            // lock the mouseTarget if target is dragged
+            if (cmp.mng.mouseTarget && !cmp.mng.mouseTarget.startDrag) {
+                cmp.mng.mouseTarget = null;
+            }
+        }
+        for (let cmp of components) {
+            if (cmp.mng.mouseTarget == null && MouseControlled.lastMouseMove) {
+                if (MouseControlled.lastMouseMove.worldPos.squareDist(cmp.pCmp.pos) < (cmp.radius * cmp.radius)) {
+                    cmp.mng.mouseTarget = cmp;
+                }
+            }
+        }
     }
     update(ctx) {
-        let mCmp = this.getComponent(Physics.MovingComponent);
-        if (ctx.mouseUp) {
-            this.startDrag = undefined;
-        }
-        else if (ctx.mouseDown) {
-            if (ctx.mouseDown.worldPos.squareDist(mCmp.pos) < (this.radius * this.radius)) {
+        // drag
+        if (ctx.mouseDown && !ctx.mouseDown.event.ctrlKey) {
+            if (this.isTarget()) {
                 this.startDrag = ctx.mouseDown.worldPos;
             }
         }
-        else if (this.startDrag && ctx.mouseMove) {
+        if (this.startDrag && ctx.mouseMove) {
             let deltaPos = ctx.mouseMove.worldPos.subtract(this.startDrag);
             this.startDrag = ctx.mouseMove.worldPos;
-            mCmp.pos.addInPlace(deltaPos);
+            this.pCmp.pos.addInPlace(deltaPos);
         }
-        if (ctx.mouseMove) {
-            this.isHover = ctx.mouseMove.worldPos.squareDist(mCmp.pos) < (this.radius * this.radius);
+        if (ctx.mouseUp) {
+            this.startDrag = null;
         }
-        if (this.isHover) {
-            let input = ctx.mouseClick;
-            if (input && input.event.button == 0 && input.event.ctrlKey) {
+        // delete
+        if (this.isTarget()) {
+            if (ctx.mouseClick && ctx.mouseClick.event.button == 0 && ctx.mouseClick.event.ctrlKey) {
                 this.ent.remove();
             }
         }
@@ -64,18 +83,18 @@ class MoveMouse extends Engine.Component {
 class Manager extends Engine.Entity {
     constructor(ent) {
         super(ent);
-        this.registerComponent(new NodeManager(this));
+        this.registerComponent(new MouseController(this));
     }
 }
 class Node extends Basics.Circle {
-    constructor(ent) {
+    constructor(ent, mng) {
         super(ent, 0.25, Node.defaultStyle);
-        this.registerComponent(new MoveMouse(this, .25));
+        this.registerComponent(new MouseControlled(this, mng, .25));
     }
     draw(ctx) {
-        let mCmp = this.getComponent(MoveMouse);
+        let mCmp = this.getComponent(MouseControlled);
         let svgCmp = this.getComponent(Basics.SvgComponent);
-        if (mCmp.isHover) {
+        if (mCmp.isTarget()) {
             svgCmp.svgEl.style = Node.hoverStyle;
         }
         else {

@@ -18,59 +18,86 @@ function getExpectedElement(id: string) {
 
 // Components
 
-class NodeManager extends Engine.Component {
+class MouseController extends Engine.Component {
+    // flag set by the MouseControlled in globalUpdate
+    mouseTarget: MouseControlled | null;
+
+    constructor(ent: Engine.Entity) {
+        super(ent);
+        this.mouseTarget = null;
+    }
+
     override update(ctx: Engine.FrameContext): void {
-        let input = ctx.mouseClick;
-        if (input && input.event.button == 0 && !input.event.ctrlKey) {
-            let hasMovedTooMuch = false;
-            if (input.relatedMouseDown) {
-                let start = new Maths.Vector(input.relatedMouseDown.event.clientX, input.relatedMouseDown.event.clientY);
-                let end = new Maths.Vector(input.event.clientX, input.event.clientY);
-                hasMovedTooMuch = end.dist(start) > 20;
-            }
-            if (!hasMovedTooMuch) {
-                let p = new Node(this.ent);
+        // spawn
+        if (this.mouseTarget == null) {
+            let input = ctx.mouseClick;
+            if (input && input.event.button == 0 && !input.event.ctrlKey) {
+                let p = new Node(this.ent, this);
                 p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = input.worldPos;
             }
         }
     }
 }
 
-class MoveMouse extends Engine.Component {
-    startDrag?: Maths.Vector;
-    isHover: boolean;
-    radius: number;
+class MouseControlled extends Engine.GlobalComponent {
+    static lastMouseMove: Engine.WorldMouseEvent | null;
 
-    constructor(ent: Engine.Entity, radius: number) {
+    startDrag: Maths.Vector | null;
+    radius: number;
+    mng: MouseController;
+    pCmp: Physics.MovingComponent;
+
+    constructor(ent: Engine.Entity, mng: MouseController, radius: number) {
         super(ent);
-        this.isHover = false;
         this.radius = radius;
+        this.mng = mng;
+        this.startDrag = null;
+        this.pCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+    }
+
+    isTarget() {
+        return this.mng.mouseTarget == this;
+    }
+
+    static override globalUpdate(ctx: Engine.FrameContext, components: Array<MouseControlled>) {
+        // find a single mouseTarget per MouseControlled and set isHover
+        if (ctx.mouseMove) {
+            MouseControlled.lastMouseMove = ctx.mouseMove;
+        }
+        for (let cmp of components) {
+            // lock the mouseTarget if target is dragged
+            if (cmp.mng.mouseTarget && !cmp.mng.mouseTarget.startDrag) {
+                cmp.mng.mouseTarget = null;
+            }
+        }
+        for (let cmp of components) {
+            if (cmp.mng.mouseTarget == null && MouseControlled.lastMouseMove) {
+                if (MouseControlled.lastMouseMove.worldPos.squareDist(cmp.pCmp.pos) < (cmp.radius * cmp.radius)) {
+                    cmp.mng.mouseTarget = cmp;
+                }
+            }
+        }
     }
 
     override update(ctx: Engine.FrameContext): void {
-        let mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-
-        if (ctx.mouseUp) {
-            this.startDrag = undefined;
-
-        } else if (ctx.mouseDown) {
-            if (ctx.mouseDown.worldPos.squareDist(mCmp.pos) < (this.radius * this.radius)) {
+        // drag
+        if (ctx.mouseDown && !ctx.mouseDown.event.ctrlKey) {
+            if (this.isTarget()) {
                 this.startDrag = ctx.mouseDown.worldPos;
             }
-
-        } else if (this.startDrag && ctx.mouseMove) {
+        }
+        if (this.startDrag && ctx.mouseMove) {
             let deltaPos = ctx.mouseMove.worldPos.subtract(this.startDrag);
             this.startDrag = ctx.mouseMove.worldPos;
-            mCmp.pos.addInPlace(deltaPos);
+            this.pCmp.pos.addInPlace(deltaPos);
+        }
+        if (ctx.mouseUp) {
+            this.startDrag = null;
         }
 
-        if (ctx.mouseMove) {
-            this.isHover = ctx.mouseMove.worldPos.squareDist(mCmp.pos) < (this.radius * this.radius);
-        }
-
-        if (this.isHover) {
-            let input = ctx.mouseClick;
-            if (input && input.event.button == 0 && input.event.ctrlKey) {
+        // delete
+        if (this.isTarget()) {
+            if (ctx.mouseClick && ctx.mouseClick.event.button == 0 && ctx.mouseClick.event.ctrlKey) {
                 this.ent.remove();
             }
         }
@@ -83,7 +110,7 @@ class MoveMouse extends Engine.Component {
 class Manager extends Engine.Entity {
     constructor(ent: Engine.Entity) {
         super(ent);
-        this.registerComponent(new NodeManager(this));
+        this.registerComponent(new MouseController(this));
     }
 }
 
@@ -91,15 +118,15 @@ class Node extends Basics.Circle {
     static readonly defaultStyle: SvgStyle = { fill: "#8AF4", strokeW: 0.06, stroke: "#8AF" };
     static readonly hoverStyle: SvgStyle = { fill: "#8AF8", strokeW: 0.08, stroke: "#8AF" };
 
-    constructor(ent: Engine.Entity) {
+    constructor(ent: Engine.Entity, mng: MouseController) {
         super(ent, 0.25, Node.defaultStyle);
-        this.registerComponent(new MoveMouse(this, .25));
+        this.registerComponent(new MouseControlled(this, mng, .25));
     }
 
     override draw(ctx: Engine.FrameContext): void {
-        let mCmp = this.getComponent<MoveMouse>(MoveMouse);
+        let mCmp = this.getComponent<MouseControlled>(MouseControlled);
         let svgCmp = this.getComponent<Basics.SvgComponent>(Basics.SvgComponent);
-        if (mCmp.isHover) {
+        if (mCmp.isTarget()) {
             svgCmp.svgEl.style = Node.hoverStyle;
         } else {
             svgCmp.svgEl.style = Node.defaultStyle;
