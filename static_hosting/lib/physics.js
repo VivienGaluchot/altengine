@@ -58,17 +58,15 @@ class MovingComponent extends Engine.Component {
         this.speed = new Maths.Vector(0, 0);
         this.acc = new Maths.Vector(0, 0);
         this.prevPos = new Maths.Vector(0, 0);
-        this.prevSpeed = new Maths.Vector(0, 0);
-        this.prevAcc = new Maths.Vector(0, 0);
-        this.prevDt = 0;
     }
     update(ctx) {
+        let speed = this.pos.subtract(this.prevPos);
         this.prevPos = this.pos.clone();
-        this.prevSpeed = this.speed.clone();
-        this.prevAcc = this.acc.clone();
-        this.prevDt = ctx.dt;
-        this.speed.addInPlace(this.acc.scale(ctx.dt));
-        this.pos.addInPlace(this.speed.scale(ctx.dt));
+        this.pos = this.pos.addInPlace(speed).addInPlace(this.acc.scale(ctx.dt * ctx.dt));
+        this.acc = new Maths.Vector(0, 0);
+    }
+    accelerate(acc) {
+        this.acc.addInPlace(acc);
     }
 }
 class ColliderComponent extends Engine.Component {
@@ -157,26 +155,25 @@ class RigidBody extends Engine.GlobalComponent {
         if (contactA && contactB) {
             a.addCollision(b, contactA);
             b.addCollision(a, contactB);
-            // speed correction
-            let rebound = a.rebound * b.rebound;
-            let massRatio = (massA, massB) => {
-                if (massA != null && massB != null) {
-                    return (1 + rebound) * massB / (massA + massB);
-                }
-                else {
-                    return 1 + rebound;
-                }
-            };
-            let deltaSpeed = a.mCmp.speed.subtract(b.mCmp.speed);
-            if (a.mass != null) {
-                let speedRatio = massRatio(a.mass, b.mass) * deltaSpeed.dotProduct(contactA.contactNormal);
-                a.mCmp.speed.subtractInPlace(contactA.contactNormal.scale(speedRatio));
-            }
-            deltaSpeed.scaleInPlace(-1);
-            if (b.mass != null) {
-                let speedRatio = massRatio(b.mass, a.mass) * deltaSpeed.dotProduct(contactB.contactNormal);
-                b.mCmp.speed.subtractInPlace(contactB.contactNormal.scale(speedRatio));
-            }
+            // // speed correction
+            // let rebound = a.rebound * b.rebound;
+            // let massRatio = (massA: CollidingMass, massB: CollidingMass) => {
+            //     if (massA != null && massB != null) {
+            //         return (1 + rebound) * massB / (massA + massB);
+            //     } else {
+            //         return 1 + rebound;
+            //     }
+            // }
+            // let deltaSpeed = a.mCmp.speed.subtract(b.mCmp.speed);
+            // if (a.mass != null) {
+            //     let speedRatio = massRatio(a.mass, b.mass) * deltaSpeed.dotProduct(contactA.contactNormal);
+            //     a.mCmp.speed.subtractInPlace(contactA.contactNormal.scale(speedRatio));
+            // }
+            // deltaSpeed.scaleInPlace(-1);
+            // if (b.mass != null) {
+            //     let speedRatio = massRatio(b.mass, a.mass) * deltaSpeed.dotProduct(contactB.contactNormal);
+            //     b.mCmp.speed.subtractInPlace(contactB.contactNormal.scale(speedRatio));
+            // }
             // pos correction
             // TODO replace by a force ?
             let posRatio = (massA, massB) => {

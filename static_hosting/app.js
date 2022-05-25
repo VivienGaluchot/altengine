@@ -11,25 +11,24 @@ function getExpectedElement(id) {
     return el;
 }
 // Components
-class Falling extends Engine.Component {
+class Constrained extends Engine.Component {
     constructor(obj) {
         super(obj);
-        this.getComponent(Physics.MovingComponent).acc.y = -9.81;
+        this.mCmp = this.getComponent(Physics.MovingComponent);
+    }
+    collide(ctx) {
+        if (this.mCmp.pos.norm() > 5) {
+            this.mCmp.pos.normalizeInPlace().scaleInPlace(5);
+        }
     }
 }
-class FallingToCenter extends Engine.Component {
+class Falling extends Engine.Component {
     constructor(obj) {
         super(obj);
         this.mCmp = this.getComponent(Physics.MovingComponent);
     }
     update(ctx) {
-        // TODO force management (to be executed before moving ?)
-        if (this.mCmp.pos.norm() > 0) {
-            this.mCmp.acc = this.mCmp.pos.normalize().scaleInPlace(-9.81);
-        }
-        else {
-            this.mCmp.acc.set(0, 0);
-        }
+        this.mCmp.accelerate(new Maths.Vector(0, -9.81));
     }
 }
 class CollideBlink extends Engine.Component {
@@ -58,9 +57,10 @@ class Spawner extends Engine.Component {
                     p = new Ball(frame.scene.root, .2, frame.scene.constructor == SceneD);
                 }
                 else {
-                    p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
+                    p = new Ball(frame.scene.root, .5, frame.scene.constructor == SceneD);
                 }
                 p.getComponent(Physics.MovingComponent).pos = ctx.mouseClick.worldPos;
+                p.getComponent(Physics.MovingComponent).prevPos = ctx.mouseClick.worldPos;
             }
         }
     }
@@ -69,51 +69,12 @@ class Spawner extends Engine.Component {
 class Ball extends Basics.Circle {
     constructor(ent, radius, isFallingToCenter) {
         super(ent, radius, { fill: "#8AF" });
+        this.registerComponent(new Constrained(this));
+        this.registerComponent(new Falling(this));
         this.registerComponent(new Physics.DiscCollider(this, radius));
-        this.registerComponent(new Physics.RigidBody(this, radius * radius, .9));
-        if (isFallingToCenter) {
-            this.registerComponent(new FallingToCenter(this));
-        }
-        else {
-            this.registerComponent(new Falling(this));
-        }
-        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
+        this.registerComponent(new Physics.RigidBody(this, radius * radius, 1));
     }
 }
-class Bloc extends Basics.Rect {
-    constructor(ent, w, h, isFallingToCenter) {
-        super(ent, w, h, { fill: "#8AF" });
-        this.registerComponent(new Physics.BoxCollider(this, new Maths.Rect(new Maths.Vector(-w / 2, -h / 2), new Maths.Vector(w, h))));
-        this.registerComponent(new Physics.RigidBody(this, w * h, .9));
-        if (isFallingToCenter) {
-            this.registerComponent(new FallingToCenter(this));
-        }
-        else {
-            this.registerComponent(new Falling(this));
-        }
-        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
-    }
-}
-class CenterFloor extends Basics.Circle {
-    constructor(ent, radius) {
-        super(ent, radius - (CenterFloor.strokeW / 2), { fill: "transparent", stroke: "#8AF8", strokeW: CenterFloor.strokeW });
-        this.registerComponent(new Physics.DiscCollider(this, radius));
-        this.registerComponent(new Physics.StaticRigidBody(this, .9));
-        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
-    }
-}
-CenterFloor.strokeW = .1;
-class Floor extends Basics.Rect {
-    constructor(ent) {
-        super(ent, Floor.width, Floor.height, { fill: "#8AF8" });
-        this.registerComponent(new Physics.BoxCollider(this, new Maths.Rect(new Maths.Vector(-Floor.width / 2, -Floor.height / 2), new Maths.Vector(Floor.width, Floor.height))));
-        this.registerComponent(new Physics.StaticRigidBody(this, .9));
-        let cmp = this.getComponent(Physics.MovingComponent);
-        cmp.pos.y = -5 - Floor.height / 2;
-    }
-}
-Floor.width = 20;
-Floor.height = .1;
 // Settings
 const checkboxGrid = getExpectedElement("checkbox-grid");
 function updateGridVisibility() {
@@ -137,7 +98,6 @@ class SceneA extends Altgn.Scene {
         super();
         this.root.registerComponent(new Spawner(this.root));
         this.root.getComponent(Basics.SvgBackgroundComponent).setColor("#012");
-        new Floor(this.root);
     }
 }
 class SceneB extends SceneA {
@@ -171,7 +131,6 @@ class SceneD extends Altgn.Scene {
         super();
         this.root.registerComponent(new Spawner(this.root));
         this.root.getComponent(Basics.SvgBackgroundComponent).setColor("#112");
-        new CenterFloor(this.root, 2);
     }
 }
 getExpectedElement("btn-scene-a").onclick = () => {

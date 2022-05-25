@@ -456,28 +456,39 @@ abstract class RenderLoop {
         if (!this.viewProvider) {
             throw new Error("view provider not defined");
         }
-        const ctx: FrameContext = {
-            dt: dtInMs / 1000,
-            dtInMs: dtInMs,
-            safeView: this.viewProvider.safeView.clone(),
-            fullView: this.viewProvider.fullView.clone(),
-            ...this.frameInput
-        };
-        this.frameInput = {}
 
         // TODO register the component at a specific render step
         // use a single callback for every steps
         // pass the step as arg
 
-        // 1. update
-        this.globalUpdate(ctx);
-        this.root.update(ctx);
+        for (let i = 0; i < 3; i++) {
+            const ctx: FrameContext = {
+                dt: (dtInMs / 1000) / 3,
+                dtInMs: dtInMs / 3,
+                safeView: this.viewProvider.safeView.clone(),
+                fullView: this.viewProvider.fullView.clone(),
+                ...this.frameInput
+            };
+            this.frameInput = {};
 
-        // 2. collide
-        this.globalCollide(ctx);
-        this.root.collide(ctx);
+            // 1. update
+            this.globalUpdate(ctx);
+            this.root.update(ctx);
+
+            // 2. collide
+            this.globalCollide(ctx);
+            this.root.collide(ctx);
+        }
 
         // 3. draw
+        const ctx: FrameContext = {
+            dt: (dtInMs / 1000),
+            dtInMs: dtInMs,
+            safeView: this.viewProvider.safeView.clone(),
+            fullView: this.viewProvider.fullView.clone(),
+            ...this.frameInput
+        };
+        this.frameInput = {};
         this.root.draw(ctx);
 
         this.lastLoopTime = timeInMs;
