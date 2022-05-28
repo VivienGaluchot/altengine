@@ -1,6 +1,7 @@
 "use strict";
 import * as Maths from './maths.js';
 import * as Engine from './engine.js';
+import * as Basics from './basics.js';
 function solveContactDiscDisc(a, b) {
     let aPos = a.mCmp.pos;
     let bPos = b.mCmp.pos;
@@ -50,32 +51,52 @@ function solveContactBoxBox(a, b) {
     }
     return { contactPoint: contactPoint, contactNormal: contactNormal };
 }
-// Public
-class MovingComponent extends Engine.Component {
+class MassPointComponent extends Engine.Component {
     constructor(obj) {
         super(obj);
+        this.mCmp = this.getComponent(Basics.TransformComponent);
         this.pos = new Maths.Vector(0, 0);
         this.speed = new Maths.Vector(0, 0);
         this.acc = new Maths.Vector(0, 0);
-        this.prevPos = new Maths.Vector(0, 0);
-        this.prevSpeed = new Maths.Vector(0, 0);
-        this.prevAcc = new Maths.Vector(0, 0);
-        this.prevDt = 0;
+    }
+    set pos(value) {
+        this.mCmp.translate = value;
+    }
+    get pos() {
+        return this.mCmp.translate;
     }
     update(ctx) {
-        this.prevPos = this.pos.clone();
-        this.prevSpeed = this.speed.clone();
-        this.prevAcc = this.acc.clone();
-        this.prevDt = ctx.dt;
         this.speed.addInPlace(this.acc.scale(ctx.dt));
         this.pos.addInPlace(this.speed.scale(ctx.dt));
+        this.acc = new Maths.Vector(0, 0);
+    }
+    applyForce(force) {
+        if (this.mass) {
+            this.acc.addInPlace(force.scale(1 / this.mass));
+        }
+        else {
+            console.warn("Try to apply force on static object", this);
+        }
+    }
+}
+// Public
+class StaticComponent extends MassPointComponent {
+    constructor(obj) {
+        super(obj);
+        this.mass = null;
+    }
+}
+class DynamicComponent extends MassPointComponent {
+    constructor(obj, mass) {
+        super(obj);
+        this.mass = mass;
     }
 }
 class ColliderComponent extends Engine.Component {
     constructor(ent, relBoundingBox) {
         super(ent);
         this.relBoundingBox = relBoundingBox;
-        this.mCmp = this.getComponent(MovingComponent);
+        this.mCmp = this.getComponent(MassPointComponent);
     }
     // called in globalCollide state
     isMaybeColliding(other) {
@@ -119,13 +140,13 @@ class BoxCollider extends ColliderComponent {
         }
     }
 }
+// Body
 class RigidBody extends Engine.GlobalComponent {
-    constructor(ent, mass, rebound) {
+    constructor(ent, rebound) {
         super(ent);
-        this.mass = mass;
         this.rebound = rebound;
         this.mCol = this.getComponent(ColliderComponent);
-        this.mCmp = this.getComponent(MovingComponent);
+        this.mCmp = this.getComponent(MassPointComponent);
         this.collisions = [];
     }
     ;
@@ -168,13 +189,13 @@ class RigidBody extends Engine.GlobalComponent {
                 }
             };
             let deltaSpeed = a.mCmp.speed.subtract(b.mCmp.speed);
-            if (a.mass != null) {
-                let speedRatio = massRatio(a.mass, b.mass) * deltaSpeed.dotProduct(contactA.contactNormal);
+            if (a.mCmp.mass != null) {
+                let speedRatio = massRatio(a.mCmp.mass, b.mCmp.mass) * deltaSpeed.dotProduct(contactA.contactNormal);
                 a.mCmp.speed.subtractInPlace(contactA.contactNormal.scale(speedRatio));
             }
             deltaSpeed.scaleInPlace(-1);
-            if (b.mass != null) {
-                let speedRatio = massRatio(b.mass, a.mass) * deltaSpeed.dotProduct(contactB.contactNormal);
+            if (b.mCmp.mass != null) {
+                let speedRatio = massRatio(b.mCmp.mass, a.mCmp.mass) * deltaSpeed.dotProduct(contactB.contactNormal);
                 b.mCmp.speed.subtractInPlace(contactB.contactNormal.scale(speedRatio));
             }
             // pos correction
@@ -188,19 +209,14 @@ class RigidBody extends Engine.GlobalComponent {
                 }
             };
             let deltaPos = contactA.contactPoint.subtract(contactB.contactPoint);
-            if (a.mass != null) {
-                a.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(a.mass, b.mass)));
+            if (a.mCmp.mass != null) {
+                a.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(a.mCmp.mass, b.mCmp.mass)));
             }
             deltaPos.scaleInPlace(-1);
-            if (b.mass != null) {
-                b.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(b.mass, a.mass)));
+            if (b.mCmp.mass != null) {
+                b.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(b.mCmp.mass, a.mCmp.mass)));
             }
         }
     }
 }
-class StaticRigidBody extends RigidBody {
-    constructor(ent, rebound) {
-        super(ent, null, rebound);
-    }
-}
-export { MovingComponent, RigidBody, StaticRigidBody, DiscCollider, BoxCollider };
+export { DynamicComponent, StaticComponent, RigidBody, DiscCollider, BoxCollider };

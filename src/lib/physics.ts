@@ -2,6 +2,7 @@
 
 import * as Maths from './maths.js';
 import * as Engine from './engine.js';
+import * as Basics from './basics.js';
 
 
 // Private
@@ -67,47 +68,77 @@ function solveContactBoxBox(a: BoxCollider, b: BoxCollider): CollisionContact | 
 }
 
 
-// Public
+type CollidingMass = number | null;
 
-class MovingComponent extends Engine.Component {
-    pos: Maths.Vector;
+abstract class MassPointComponent extends Engine.Component {
+    readonly mCmp: Basics.TransformComponent;
+
+    abstract mass: CollidingMass;
     speed: Maths.Vector;
     acc: Maths.Vector;
 
-    prevPos: Maths.Vector;
-    prevSpeed: Maths.Vector;
-    prevAcc: Maths.Vector;
-    prevDt: number;
-
     constructor(obj: Engine.Entity) {
         super(obj);
+
+        this.mCmp = this.getComponent<Basics.TransformComponent>(Basics.TransformComponent);
+
         this.pos = new Maths.Vector(0, 0);
         this.speed = new Maths.Vector(0, 0);
         this.acc = new Maths.Vector(0, 0);
-        this.prevPos = new Maths.Vector(0, 0);
-        this.prevSpeed = new Maths.Vector(0, 0);
-        this.prevAcc = new Maths.Vector(0, 0);
-        this.prevDt = 0;
+    }
+
+    set pos(value: Maths.Vector) {
+        this.mCmp.translate = value;
+    }
+
+    get pos(): Maths.Vector {
+        return this.mCmp.translate;
     }
 
     override update(ctx: Engine.FrameContext) {
-        this.prevPos = this.pos.clone();
-        this.prevSpeed = this.speed.clone();
-        this.prevAcc = this.acc.clone();
-        this.prevDt = ctx.dt;
         this.speed.addInPlace(this.acc.scale(ctx.dt));
         this.pos.addInPlace(this.speed.scale(ctx.dt));
+        this.acc = new Maths.Vector(0, 0);
+    }
+
+    applyForce(force: Maths.Vector) {
+        if (this.mass) {
+            this.acc.addInPlace(force.scale(1 / this.mass));
+        } else {
+            console.warn("Try to apply force on static object", this);
+        }
+    }
+}
+
+
+// Public
+
+class StaticComponent extends MassPointComponent {
+    mass: null;
+
+    constructor(obj: Engine.Entity) {
+        super(obj);
+        this.mass = null;
+    }
+}
+
+class DynamicComponent extends MassPointComponent {
+    mass: number;
+
+    constructor(obj: Engine.Entity, mass: number) {
+        super(obj);
+        this.mass = mass;
     }
 }
 
 abstract class ColliderComponent extends Engine.Component {
-    readonly mCmp: MovingComponent;
+    readonly mCmp: MassPointComponent;
     readonly relBoundingBox: Maths.Rect;
 
     constructor(ent: Engine.Entity, relBoundingBox: Maths.Rect) {
         super(ent);
         this.relBoundingBox = relBoundingBox;
-        this.mCmp = this.getComponent<MovingComponent>(MovingComponent);
+        this.mCmp = this.getComponent<MassPointComponent>(MassPointComponent);
     }
 
     // called in globalCollide state
@@ -162,21 +193,17 @@ class BoxCollider extends ColliderComponent {
 
 // Body
 
-type CollidingMass = number | null;
-
 class RigidBody extends Engine.GlobalComponent {
-    readonly mass: CollidingMass;
     readonly rebound: number;
     readonly mCol: ColliderComponent;
-    readonly mCmp: MovingComponent;
+    readonly mCmp: MassPointComponent;
     collisions: Array<Collision>;;
 
-    constructor(ent: Engine.Entity, mass: CollidingMass, rebound: number) {
+    constructor(ent: Engine.Entity, rebound: number) {
         super(ent);
-        this.mass = mass;
         this.rebound = rebound;
         this.mCol = this.getComponent<ColliderComponent>(ColliderComponent);
-        this.mCmp = this.getComponent<MovingComponent>(MovingComponent);
+        this.mCmp = this.getComponent<MassPointComponent>(MassPointComponent);
         this.collisions = [];
     }
 
@@ -227,13 +254,13 @@ class RigidBody extends Engine.GlobalComponent {
                 }
             }
             let deltaSpeed = a.mCmp.speed.subtract(b.mCmp.speed);
-            if (a.mass != null) {
-                let speedRatio = massRatio(a.mass, b.mass) * deltaSpeed.dotProduct(contactA.contactNormal);
+            if (a.mCmp.mass != null) {
+                let speedRatio = massRatio(a.mCmp.mass, b.mCmp.mass) * deltaSpeed.dotProduct(contactA.contactNormal);
                 a.mCmp.speed.subtractInPlace(contactA.contactNormal.scale(speedRatio));
             }
             deltaSpeed.scaleInPlace(-1);
-            if (b.mass != null) {
-                let speedRatio = massRatio(b.mass, a.mass) * deltaSpeed.dotProduct(contactB.contactNormal);
+            if (b.mCmp.mass != null) {
+                let speedRatio = massRatio(b.mCmp.mass, a.mCmp.mass) * deltaSpeed.dotProduct(contactB.contactNormal);
                 b.mCmp.speed.subtractInPlace(contactB.contactNormal.scale(speedRatio));
             }
 
@@ -247,21 +274,15 @@ class RigidBody extends Engine.GlobalComponent {
                 }
             }
             let deltaPos = contactA.contactPoint.subtract(contactB.contactPoint);
-            if (a.mass != null) {
-                a.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(a.mass, b.mass)));
+            if (a.mCmp.mass != null) {
+                a.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(a.mCmp.mass, b.mCmp.mass)));
             }
             deltaPos.scaleInPlace(-1);
-            if (b.mass != null) {
-                b.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(b.mass, a.mass)));
+            if (b.mCmp.mass != null) {
+                b.mCmp.pos.subtractInPlace(deltaPos.scale(posRatio(b.mCmp.mass, a.mCmp.mass)));
             }
         }
     }
 }
 
-class StaticRigidBody extends RigidBody {
-    constructor(ent: Engine.Entity, rebound: number) {
-        super(ent, null, rebound);
-    }
-}
-
-export { MovingComponent, RigidBody, StaticRigidBody, DiscCollider, BoxCollider }
+export { DynamicComponent, StaticComponent, RigidBody, DiscCollider, BoxCollider }

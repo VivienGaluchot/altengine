@@ -10,6 +10,12 @@ class Vector {
     static center(a, b) {
         return b.subtract(a).scaleInPlace(1 / 2).addInPlace(a);
     }
+    static up() {
+        return new Vector(0, 1);
+    }
+    static down() {
+        return new Vector(0, -1);
+    }
     set(x, y) {
         checkIsFinite(x);
         checkIsFinite(y);

@@ -21,7 +21,7 @@ class MouseController extends Engine.Component {
             let input = ctx.mouseClick;
             if (input && input.event.button == 0 && !input.event.ctrlKey) {
                 let p = new Node(this.ent, this);
-                p.getComponent(Physics.MovingComponent).pos = input.worldPos;
+                p.getComponent(Physics.DynamicComponent).pos = input.worldPos;
             }
         }
     }
@@ -32,7 +32,7 @@ class MouseControlled extends Engine.GlobalComponent {
         this.radius = radius;
         this.mng = mng;
         this.startDrag = null;
-        this.pCmp = this.getComponent(Physics.MovingComponent);
+        this.pCmp = this.getComponent(Physics.DynamicComponent);
     }
     isTarget() {
         return this.mng.mouseTarget == this;

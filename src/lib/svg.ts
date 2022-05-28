@@ -68,6 +68,12 @@ class SvgTag extends SvgNode {
     constructor(tag: string) {
         const svgNS = "http://www.w3.org/2000/svg";
         super(document.createElementNS(svgNS, tag));
+        this.rotate = 0;
+    }
+
+    set rotate(value: number) {
+        Maths.checkIsFinite(value);
+        this.setAttribute("transform", `rotate(${value.toString()})`);
     }
 }
 

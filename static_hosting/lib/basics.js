@@ -1,9 +1,16 @@
 "use strict";
 import * as Svg from './svg.js';
 import * as Engine from './engine.js';
-import * as Physics from './physics.js';
+import * as Maths from './maths.js';
 import * as Altgn from './altng.js';
 // Public
+class TransformComponent extends Engine.Component {
+    constructor(obj) {
+        super(obj);
+        this.translate = new Maths.Vector(0, 0);
+        this.rotate = 0;
+    }
+}
 class SvgComponent extends Engine.Component {
     constructor(ent, layer) {
         super(ent);
@@ -120,18 +127,19 @@ class SvgBackgroundComponent extends SvgComponent {
 class SvgCircleComponent extends SvgComponent {
     constructor(ent, radius, style) {
         super(ent, 0);
-        this.mCmp = this.getComponent(Physics.MovingComponent);
-        this.svgEl = new Svg.Circle(this.mCmp.pos.x, this.mCmp.pos.y, radius, style);
+        this.mCmp = this.getComponent(TransformComponent);
+        this.svgEl = new Svg.Circle(this.mCmp.translate.x, this.mCmp.translate.y, radius, style);
     }
     draw(ctx) {
-        this.svgEl.x = this.mCmp.pos.x;
-        this.svgEl.y = this.mCmp.pos.y;
+        this.svgEl.x = this.mCmp.translate.x;
+        this.svgEl.y = this.mCmp.translate.y;
+        this.svgEl.rotate = this.mCmp.rotate;
     }
 }
 class Circle extends Engine.Entity {
     constructor(parent, radius, style) {
         super(parent);
-        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new TransformComponent(this));
         this.registerComponent(new SvgCircleComponent(this, radius, style));
     }
 }
@@ -140,18 +148,19 @@ class SvgRectComponent extends SvgComponent {
         super(ent, 0);
         this.w = w;
         this.h = h;
-        this.mCmp = this.getComponent(Physics.MovingComponent);
-        this.svgEl = new Svg.Rect(this.mCmp.pos.x - (this.w / 2), this.mCmp.pos.y - (this.h / 2), w, h, style);
+        this.mCmp = this.getComponent(TransformComponent);
+        this.svgEl = new Svg.Rect(this.mCmp.translate.x - (this.w / 2), this.mCmp.translate.y - (this.h / 2), w, h, style);
     }
     draw(ctx) {
-        this.svgEl.x = this.mCmp.pos.x - (this.w / 2);
-        this.svgEl.y = this.mCmp.pos.y - (this.h / 2);
+        this.svgEl.x = this.mCmp.translate.x - (this.w / 2);
+        this.svgEl.y = this.mCmp.translate.y - (this.h / 2);
+        this.svgEl.rotate = this.mCmp.rotate;
     }
 }
 class Rect extends Engine.Entity {
     constructor(ent, w, h, style) {
         super(ent);
-        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new TransformComponent(this));
         this.registerComponent(new SvgRectComponent(this, w, h, style));
     }
 }
@@ -160,21 +169,22 @@ class SvgLineComponent extends SvgComponent {
         super(ent, 0);
         this.a = a;
         this.b = b;
-        this.mCmp = this.getComponent(Physics.MovingComponent);
+        this.mCmp = this.getComponent(TransformComponent);
         this.svgEl = new Svg.Line(a.x, a.y, b.x, b.y, style);
     }
     draw(ctx) {
-        this.svgEl.x1 = this.mCmp.pos.x + this.a.x;
-        this.svgEl.y1 = this.mCmp.pos.y + this.a.y;
-        this.svgEl.x2 = this.mCmp.pos.x + this.b.x;
-        this.svgEl.y2 = this.mCmp.pos.y + this.b.y;
+        this.svgEl.x1 = this.mCmp.translate.x + this.a.x;
+        this.svgEl.y1 = this.mCmp.translate.y + this.a.y;
+        this.svgEl.x2 = this.mCmp.translate.x + this.b.x;
+        this.svgEl.y2 = this.mCmp.translate.y + this.b.y;
+        this.svgEl.rotate = this.mCmp.rotate;
     }
 }
 class Line extends Engine.Entity {
     constructor(ent, a, b, style) {
         super(ent);
-        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new TransformComponent(this));
         this.registerComponent(new SvgLineComponent(this, a, b, style));
     }
 }
-export { SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, Line, SvgRectComponent, SvgCircleComponent, SvgLineComponent };
+export { TransformComponent, SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, Line, SvgRectComponent, SvgCircleComponent, SvgLineComponent };

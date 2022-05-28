@@ -33,7 +33,7 @@ class MouseController extends Engine.Component {
             let input = ctx.mouseClick;
             if (input && input.event.button == 0 && !input.event.ctrlKey) {
                 let p = new Node(this.ent, this);
-                p.getComponent<Physics.MovingComponent>(Physics.MovingComponent).pos = input.worldPos;
+                p.getComponent<Physics.DynamicComponent>(Physics.DynamicComponent).pos = input.worldPos;
             }
         }
     }
@@ -45,14 +45,14 @@ class MouseControlled extends Engine.GlobalComponent {
     startDrag: Maths.Vector | null;
     radius: number;
     mng: MouseController;
-    pCmp: Physics.MovingComponent;
+    pCmp: Physics.DynamicComponent;
 
     constructor(ent: Engine.Entity, mng: MouseController, radius: number) {
         super(ent);
         this.radius = radius;
         this.mng = mng;
         this.startDrag = null;
-        this.pCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+        this.pCmp = this.getComponent<Physics.DynamicComponent>(Physics.DynamicComponent);
     }
 
     isTarget() {

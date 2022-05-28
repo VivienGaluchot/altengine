@@ -14,38 +14,20 @@ function getExpectedElement(id) {
 class Falling extends Engine.Component {
     constructor(obj) {
         super(obj);
-        this.getComponent(Physics.MovingComponent).acc.y = -9.81;
+    }
+    update(ctx) {
+        let cmp = this.getComponent(Physics.DynamicComponent);
+        cmp.applyForce(Maths.Vector.down().scaleInPlace(9.81 * cmp.mass));
     }
 }
 class FallingToCenter extends Engine.Component {
     constructor(obj) {
         super(obj);
-        this.mCmp = this.getComponent(Physics.MovingComponent);
+        this.mCmp = this.getComponent(Physics.DynamicComponent);
     }
     update(ctx) {
-        // TODO force management (to be executed before moving ?)
         if (this.mCmp.pos.norm() > 0) {
-            this.mCmp.acc = this.mCmp.pos.normalize().scaleInPlace(-9.81);
-        }
-        else {
-            this.mCmp.acc.set(0, 0);
-        }
-    }
-}
-class CollideBlink extends Engine.Component {
-    constructor(obj, noCollidingFill, collidingFill) {
-        super(obj);
-        this.collidingFill = collidingFill;
-        this.noCollidingFill = noCollidingFill;
-        this.collCmp = this.getComponent(Physics.RigidBody);
-        this.svgCmp = this.getComponent(Basics.SvgComponent);
-    }
-    draw(ctx) {
-        if (this.collCmp.collisions.length > 0) {
-            this.svgCmp.svgEl.style = { fill: this.collidingFill };
-        }
-        else {
-            this.svgCmp.svgEl.style = { fill: this.noCollidingFill };
+            this.mCmp.applyForce(this.mCmp.pos.normalize().scaleInPlace(-9.81 * this.mCmp.mass));
         }
     }
 }
@@ -60,7 +42,7 @@ class Spawner extends Engine.Component {
                 else {
                     p = new Bloc(frame.scene.root, .6, .4, frame.scene.constructor == SceneD);
                 }
-                p.getComponent(Physics.MovingComponent).pos = ctx.mouseClick.worldPos;
+                p.getComponent(Physics.DynamicComponent).pos = ctx.mouseClick.worldPos;
             }
         }
     }
@@ -69,46 +51,47 @@ class Spawner extends Engine.Component {
 class Ball extends Basics.Circle {
     constructor(ent, radius, isFallingToCenter) {
         super(ent, radius, { fill: "#8AF" });
+        this.registerComponent(new Physics.DynamicComponent(this, radius * radius));
         this.registerComponent(new Physics.DiscCollider(this, radius));
-        this.registerComponent(new Physics.RigidBody(this, radius * radius, .9));
+        this.registerComponent(new Physics.RigidBody(this, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
         }
         else {
             this.registerComponent(new Falling(this));
         }
-        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
 class Bloc extends Basics.Rect {
     constructor(ent, w, h, isFallingToCenter) {
         super(ent, w, h, { fill: "#8AF" });
+        this.registerComponent(new Physics.DynamicComponent(this, w * h));
         this.registerComponent(new Physics.BoxCollider(this, new Maths.Rect(new Maths.Vector(-w / 2, -h / 2), new Maths.Vector(w, h))));
-        this.registerComponent(new Physics.RigidBody(this, w * h, .9));
+        this.registerComponent(new Physics.RigidBody(this, .9));
         if (isFallingToCenter) {
             this.registerComponent(new FallingToCenter(this));
         }
         else {
             this.registerComponent(new Falling(this));
         }
-        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
     }
 }
 class CenterFloor extends Basics.Circle {
     constructor(ent, radius) {
         super(ent, radius - (CenterFloor.strokeW / 2), { fill: "transparent", stroke: "#8AF8", strokeW: CenterFloor.strokeW });
+        this.registerComponent(new Physics.StaticComponent(this));
         this.registerComponent(new Physics.DiscCollider(this, radius));
-        this.registerComponent(new Physics.StaticRigidBody(this, .9));
-        // this.registerComponent(new CollideBlink(this, "#8AF", "#0F0"));
+        this.registerComponent(new Physics.RigidBody(this, .9));
     }
 }
 CenterFloor.strokeW = .1;
 class Floor extends Basics.Rect {
     constructor(ent) {
         super(ent, Floor.width, Floor.height, { fill: "#8AF8" });
+        this.registerComponent(new Physics.StaticComponent(this));
         this.registerComponent(new Physics.BoxCollider(this, new Maths.Rect(new Maths.Vector(-Floor.width / 2, -Floor.height / 2), new Maths.Vector(Floor.width, Floor.height))));
-        this.registerComponent(new Physics.StaticRigidBody(this, .9));
-        let cmp = this.getComponent(Physics.MovingComponent);
+        this.registerComponent(new Physics.RigidBody(this, .9));
+        let cmp = this.getComponent(Physics.StaticComponent);
         cmp.pos.y = -5 - Floor.height / 2;
     }
 }
@@ -146,7 +129,7 @@ class SceneB extends SceneA {
         this.root.getComponent(Basics.SvgBackgroundComponent).setColor("#013");
         for (let i = -9; i <= 9; i += .5) {
             let p = new Ball(this.root, .2, false);
-            let cmp = p.getComponent(Physics.MovingComponent);
+            let cmp = p.getComponent(Physics.DynamicComponent);
             cmp.pos.x = i;
             cmp.pos.y = Math.abs(i);
         }
@@ -159,7 +142,7 @@ class SceneC extends SceneA {
         for (let j = 0; j < 3; j++) {
             for (let i = -9; i <= 9; i += .5) {
                 let p = new Ball(this.root, .2, false);
-                let cmp = p.getComponent(Physics.MovingComponent);
+                let cmp = p.getComponent(Physics.DynamicComponent);
                 cmp.pos.x = i;
                 cmp.pos.y = Math.abs(i) + j;
             }

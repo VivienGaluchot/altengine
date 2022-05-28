@@ -2,12 +2,22 @@
 
 import * as Svg from './svg.js';
 import * as Engine from './engine.js';
-import * as Physics from './physics.js';
 import * as Maths from './maths.js';
 import * as Altgn from './altng.js';
 
 
 // Public
+
+class TransformComponent extends Engine.Component {
+    translate: Maths.Vector;
+    rotate: number;
+
+    constructor(obj: Engine.Entity) {
+        super(obj);
+        this.translate = new Maths.Vector(0, 0);
+        this.rotate = 0;
+    }
+}
 
 abstract class SvgComponent extends Engine.Component {
     abstract readonly svgEl: Svg.SvgNode;
@@ -154,32 +164,32 @@ class SvgBackgroundComponent extends SvgComponent {
 
 class SvgCircleComponent extends SvgComponent {
     readonly svgEl: Svg.Circle;
-    mCmp: Physics.MovingComponent;
+    readonly mCmp: TransformComponent;
 
     constructor(ent: Engine.Entity, radius: number, style: Svg.SvgStyle) {
         super(ent, 0);
-        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-
-        this.svgEl = new Svg.Circle(this.mCmp.pos.x, this.mCmp.pos.y, radius, style);
+        this.mCmp = this.getComponent<TransformComponent>(TransformComponent);
+        this.svgEl = new Svg.Circle(this.mCmp.translate.x, this.mCmp.translate.y, radius, style);
     }
 
     override draw(ctx: Engine.FrameContext) {
-        this.svgEl.x = this.mCmp.pos.x;
-        this.svgEl.y = this.mCmp.pos.y;
+        this.svgEl.x = this.mCmp.translate.x;
+        this.svgEl.y = this.mCmp.translate.y;
+        this.svgEl.rotate = this.mCmp.rotate;
     }
 }
 
 class Circle extends Engine.Entity {
     constructor(parent: Engine.Entity, radius: number, style: Svg.SvgStyle) {
         super(parent);
-        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new TransformComponent(this));
         this.registerComponent(new SvgCircleComponent(this, radius, style));
     }
 }
 
 class SvgRectComponent extends SvgComponent {
-    svgEl: Svg.Rect;
-    mCmp: Physics.MovingComponent;
+    readonly svgEl: Svg.Rect;
+    readonly mCmp: TransformComponent;
     w: number;
     h: number;
 
@@ -187,27 +197,28 @@ class SvgRectComponent extends SvgComponent {
         super(ent, 0);
         this.w = w;
         this.h = h;
-        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
-        this.svgEl = new Svg.Rect(this.mCmp.pos.x - (this.w / 2), this.mCmp.pos.y - (this.h / 2), w, h, style);
+        this.mCmp = this.getComponent<TransformComponent>(TransformComponent);
+        this.svgEl = new Svg.Rect(this.mCmp.translate.x - (this.w / 2), this.mCmp.translate.y - (this.h / 2), w, h, style);
     }
 
     override draw(ctx: Engine.FrameContext) {
-        this.svgEl.x = this.mCmp.pos.x - (this.w / 2);
-        this.svgEl.y = this.mCmp.pos.y - (this.h / 2);
+        this.svgEl.x = this.mCmp.translate.x - (this.w / 2);
+        this.svgEl.y = this.mCmp.translate.y - (this.h / 2);
+        this.svgEl.rotate = this.mCmp.rotate;
     }
 }
 
 class Rect extends Engine.Entity {
     constructor(ent: Engine.Entity, w: number, h: number, style: Svg.SvgStyle) {
         super(ent);
-        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new TransformComponent(this));
         this.registerComponent(new SvgRectComponent(this, w, h, style));
     }
 }
 
 class SvgLineComponent extends SvgComponent {
-    svgEl: Svg.Line;
-    mCmp: Physics.MovingComponent;
+    readonly svgEl: Svg.Line;
+    readonly mCmp: TransformComponent;
     a: Maths.Vector;
     b: Maths.Vector;
 
@@ -215,25 +226,26 @@ class SvgLineComponent extends SvgComponent {
         super(ent, 0);
         this.a = a;
         this.b = b;
-        this.mCmp = this.getComponent<Physics.MovingComponent>(Physics.MovingComponent);
+        this.mCmp = this.getComponent<TransformComponent>(TransformComponent);
         this.svgEl = new Svg.Line(a.x, a.y, b.x, b.y, style);
     }
 
     override draw(ctx: Engine.FrameContext) {
-        this.svgEl.x1 = this.mCmp.pos.x + this.a.x;
-        this.svgEl.y1 = this.mCmp.pos.y + this.a.y;
-        this.svgEl.x2 = this.mCmp.pos.x + this.b.x;
-        this.svgEl.y2 = this.mCmp.pos.y + this.b.y;
+        this.svgEl.x1 = this.mCmp.translate.x + this.a.x;
+        this.svgEl.y1 = this.mCmp.translate.y + this.a.y;
+        this.svgEl.x2 = this.mCmp.translate.x + this.b.x;
+        this.svgEl.y2 = this.mCmp.translate.y + this.b.y;
+        this.svgEl.rotate = this.mCmp.rotate;
     }
 }
 
 class Line extends Engine.Entity {
     constructor(ent: Engine.Entity, a: Maths.Vector, b: Maths.Vector, style: Svg.SvgStyle) {
         super(ent);
-        this.registerComponent(new Physics.MovingComponent(this));
+        this.registerComponent(new TransformComponent(this));
         this.registerComponent(new SvgLineComponent(this, a, b, style));
     }
 }
 
 
-export { SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, Line, SvgRectComponent, SvgCircleComponent, SvgLineComponent }
+export { TransformComponent, SvgComponent, SvgGridComponent, SvgBackgroundComponent, Circle, Rect, Line, SvgRectComponent, SvgCircleComponent, SvgLineComponent }

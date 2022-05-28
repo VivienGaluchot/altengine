@@ -93,7 +93,7 @@ class Classifier {
             }
         }
     }
-    getUniqueInstance(classType) {
+    getUniqueInstanceOrNull(classType) {
         let instance = null;
         for (let obj of this.getAllInstances(classType)) {
             if (instance == null) {
@@ -104,6 +104,10 @@ class Classifier {
                 throw new Error(`multiple child class registered for ${classType.name}`);
             }
         }
+        return instance;
+    }
+    getUniqueInstance(classType) {
+        let instance = this.getUniqueInstanceOrNull(classType);
         if (instance == null) {
             console.error("no child class registered for", { class: classType, classifier: this });
             throw new Error(`no child class registered for ${classType.name}`);
@@ -119,6 +123,9 @@ class Component {
     }
     getComponent(cmpClass) {
         return this.ent.getComponent(cmpClass);
+    }
+    getComponentOrNull(cmpClass) {
+        return this.ent.getComponentOrNull(cmpClass);
     }
     *getComponents(cmpClass) {
         return this.ent.getComponents(cmpClass);
@@ -207,6 +214,10 @@ class Entity {
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
     getComponent(cmpClass) {
         return this.classifier.getUniqueInstance(cmpClass);
+    }
+    // TODO improve writing to don't need to specify the class in the generic and argument if possible
+    getComponentOrNull(cmpClass) {
+        return this.classifier.getUniqueInstanceOrNull(cmpClass);
     }
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
     *getComponents(cmpClass) {

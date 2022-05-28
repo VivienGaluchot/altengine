@@ -114,7 +114,7 @@ class Classifier {
         }
     }
 
-    getUniqueInstance<Type>(classType: Function): Type {
+    getUniqueInstanceOrNull<Type>(classType: Function): Type | null {
         let instance = null;
         for (let obj of this.getAllInstances<Type>(classType)) {
             if (instance == null) {
@@ -124,6 +124,11 @@ class Classifier {
                 throw new Error(`multiple child class registered for ${classType.name}`);
             }
         }
+        return instance;
+    }
+
+    getUniqueInstance<Type>(classType: Function): Type {
+        let instance = this.getUniqueInstanceOrNull<Type>(classType);
         if (instance == null) {
             console.error("no child class registered for", { class: classType, classifier: this });
             throw new Error(`no child class registered for ${classType.name}`);
@@ -173,6 +178,10 @@ class Component {
 
     getComponent<Type extends Component>(cmpClass: Function): Type {
         return this.ent.getComponent(cmpClass);
+    }
+
+    getComponentOrNull<Type extends Component>(cmpClass: Function): Type | null {
+        return this.ent.getComponentOrNull(cmpClass);
     }
 
     * getComponents<Type extends Component>(cmpClass: Function): Generator<Type> {
@@ -286,6 +295,11 @@ class Entity {
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
     getComponent<Type extends Component>(cmpClass: Function): Type {
         return <Type>this.classifier.getUniqueInstance(cmpClass);
+    }
+
+    // TODO improve writing to don't need to specify the class in the generic and argument if possible
+    getComponentOrNull<Type extends Component>(cmpClass: Function): Type | null {
+        return <Type>this.classifier.getUniqueInstanceOrNull(cmpClass);
     }
 
     // TODO improve writing to don't need to specify the class in the generic and argument if possible
@@ -463,7 +477,7 @@ abstract class RenderLoop {
             fullView: this.viewProvider.fullView.clone(),
             ...this.frameInput
         };
-        this.frameInput = {}
+        this.frameInput = {};
 
         // TODO register the component at a specific render step
         // use a single callback for every steps

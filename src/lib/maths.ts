@@ -11,6 +11,14 @@ class Vector {
         return b.subtract(a).scaleInPlace(1 / 2).addInPlace(a);
     }
 
+    static up(): Vector {
+        return new Vector(0, 1);
+    }
+
+    static down(): Vector {
+        return new Vector(0, -1);
+    }
+
     constructor(x: number, y: number) {
         checkIsFinite(x);
         checkIsFinite(y);
